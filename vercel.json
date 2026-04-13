@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/vendor-reminder",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/sla-checker",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/daily-digest-builder",
+      "schedule": "45 17 * * *"
+    },
+    {
+      "path": "/api/cron/vendor-score-update",
+      "schedule": "0 0 * * 0"
+    }
+  ]
+}
