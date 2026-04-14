@@ -46,9 +46,10 @@ declare global {
 }
 
 const DEMO_DB_PATH = join(process.cwd(), ".data", "demo-db.json");
+const CAN_READ_LOCAL_BOOTSTRAP = !process.env.VERCEL && process.env.NODE_ENV !== "production";
 
 function loadBootstrapData(): DemoDatabase {
-  if (existsSync(DEMO_DB_PATH)) {
+  if (CAN_READ_LOCAL_BOOTSTRAP && existsSync(DEMO_DB_PATH)) {
     return JSON.parse(readFileSync(DEMO_DB_PATH, "utf8")) as DemoDatabase;
   }
 
