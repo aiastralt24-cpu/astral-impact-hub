@@ -39,17 +39,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <h1 className="font-display mt-3 text-4xl font-black tracking-[-0.04em] text-[var(--foreground)] sm:text-5xl">
               Astral Impact Hub
             </h1>
-            <p className="mt-5 text-sm leading-6 text-[var(--gray-mid)]">
-              Demo access: <span className="font-medium text-[var(--foreground)]">superadmin</span> /{" "}
-              <span className="font-medium text-[var(--foreground)]">superadmin@321</span>
-            </p>
             <form action={loginAction} className="mt-10 space-y-5">
               <div className="space-y-4">
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-[var(--gray-mid)]">User ID</span>
                   <input
                     name="username"
-                    defaultValue="superadmin"
+                    autoComplete="username"
+                    placeholder="Enter your user ID"
                     className="h-14 w-full rounded-[22px] border-[rgba(0,71,171,0.10)] bg-white/88 px-5 text-lg font-medium shadow-[0_8px_24px_rgba(17,24,39,0.04)]"
                   />
                 </label>
@@ -58,7 +55,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   <input
                     name="password"
                     type="password"
-                    defaultValue="superadmin@321"
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
                     className="h-14 w-full rounded-[22px] border-[rgba(0,71,171,0.10)] bg-white/88 px-5 text-lg font-medium shadow-[0_8px_24px_rgba(17,24,39,0.04)]"
                   />
                 </label>
