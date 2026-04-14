@@ -1,5 +1,6 @@
 import { createProjectAction, deleteProjectAction, updateProjectAction } from "@/features/projects/actions";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, ProjectRecord, VendorRecord } from "@/types/domain";
 
 type ProjectManagementProps = {
@@ -103,17 +104,25 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
                     Require admin approval
                   </label>
                   <div className="flex flex-wrap gap-3">
-                    <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]">
+                    <ConfirmSubmitButton
+                      confirmMessage={`Save changes for ${project.name}?`}
+                      pendingLabel="Saving..."
+                      className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
+                    >
                       Save project
-                    </button>
+                    </ConfirmSubmitButton>
                   </div>
                 </form>
 
                 <form action={deleteProjectAction} className="mt-3">
                   <input type="hidden" name="projectId" value={project.id} />
-                  <button className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16">
+                  <ConfirmSubmitButton
+                    confirmMessage={`Delete ${project.name}? This will also remove linked updates and media metadata.`}
+                    pendingLabel="Deleting..."
+                    className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16"
+                  >
                     Delete project
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               </details>
             ) : null}
@@ -177,7 +186,13 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
             <input type="checkbox" name="requireAdminApproval" />
             Require admin approval
           </label>
-          <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]">Create project</button>
+          <ConfirmSubmitButton
+            confirmMessage="Create this project?"
+            pendingLabel="Creating..."
+            className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
+          >
+            Create project
+          </ConfirmSubmitButton>
         </div>
       </form>
     </div>

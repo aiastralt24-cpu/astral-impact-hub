@@ -1,4 +1,5 @@
 import { createVendorAction, deleteVendorAction, updateVendorAction } from "@/features/vendors/actions";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, VendorRecord } from "@/types/domain";
 
 type VendorManagementProps = {
@@ -76,18 +77,26 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
                   </div>
                   <textarea name="notes" defaultValue={vendor.notes} placeholder="Notes" className="min-h-28 rounded-3xl px-4 py-3" />
                   <div className="flex flex-wrap gap-3">
-                    <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]">
+                    <ConfirmSubmitButton
+                      confirmMessage={`Save changes for ${vendor.name}?`}
+                      pendingLabel="Saving..."
+                      className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
+                    >
                       Save vendor
-                    </button>
+                    </ConfirmSubmitButton>
                   </div>
                 </form>
 
                 {canDeleteVendors ? (
                   <form action={deleteVendorAction} className="mt-3">
                     <input type="hidden" name="vendorId" value={vendor.id} />
-                    <button className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16">
+                    <ConfirmSubmitButton
+                      confirmMessage={`Delete ${vendor.name}? This cannot be undone.`}
+                      pendingLabel="Deleting..."
+                      className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16"
+                    >
                       Delete vendor
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 ) : null}
               </details>
@@ -119,7 +128,13 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
             </div>
           </div>
           <textarea name="notes" placeholder="Notes" className="min-h-28 rounded-3xl px-4 py-3" />
-          <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]">Create vendor</button>
+          <ConfirmSubmitButton
+            confirmMessage="Create this vendor?"
+            pendingLabel="Creating..."
+            className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
+          >
+            Create vendor
+          </ConfirmSubmitButton>
         </div>
         </form>
         ) : null}

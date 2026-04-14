@@ -1,4 +1,5 @@
 import { createWorkspaceUserAction, deleteWorkspaceUserAction, updateWorkspaceUserAction } from "@/features/settings/actions";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { requireSession } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/data/demo-store";
 import { canAccessRoute } from "@/lib/auth/roles";
@@ -108,17 +109,25 @@ export default async function SettingsPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <button className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]">
+                      <ConfirmSubmitButton
+                        confirmMessage={`Save changes for ${user.fullName}?`}
+                        pendingLabel="Saving..."
+                        className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
+                      >
                         Save changes
-                      </button>
+                      </ConfirmSubmitButton>
                     </div>
                   </form>
 
                   <form action={deleteWorkspaceUserAction} className="mt-3">
                     <input type="hidden" name="userId" value={user.id} />
-                    <button className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16">
+                    <ConfirmSubmitButton
+                      confirmMessage={`Delete ${user.fullName}? This cannot be undone.`}
+                      pendingLabel="Deleting..."
+                      className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16"
+                    >
                       Delete user
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </details>
               )}
@@ -174,9 +183,13 @@ export default async function SettingsPage() {
                 ))}
               </div>
             </div>
-            <button className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]">
+            <ConfirmSubmitButton
+              confirmMessage="Create this user?"
+              pendingLabel="Creating..."
+              className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
+            >
               Create user
-            </button>
+            </ConfirmSubmitButton>
           </div>
         </form>
       </div>

@@ -428,6 +428,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
               type="button"
               onClick={() => {
                 if (!selectedProject || !selectedVendor) return;
+                if (!window.confirm("Do you want to submit this update now?")) return;
                 setStatus("Submitting update...");
                 startTransition(async () => {
                   await createUpdateAction({

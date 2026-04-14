@@ -1,5 +1,6 @@
 import { approvalAction } from "@/features/updates/actions";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, ApprovalComment, UpdateRecord } from "@/types/domain";
 
 type ApprovalQueueProps = {
@@ -101,27 +102,33 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                     className="h-11 w-full rounded-2xl px-4 text-sm"
                   />
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <button
+                    <ConfirmSubmitButton
                       name="action"
                       value="approve"
+                      confirmMessage={`Approve the update for ${update.projectName}?`}
+                      pendingLabel="Approving..."
                       className="rounded-full border border-emerald-500/16 bg-emerald-500/10 px-4 py-2.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-500/16"
                     >
                       Approve
-                    </button>
-                    <button
+                    </ConfirmSubmitButton>
+                    <ConfirmSubmitButton
                       name="action"
                       value="request_revision"
+                      confirmMessage={`Request a revision for ${update.projectName}?`}
+                      pendingLabel="Sending..."
                       className="rounded-full border border-amber-500/16 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-500/16"
                     >
                       Request revision
-                    </button>
-                    <button
+                    </ConfirmSubmitButton>
+                    <ConfirmSubmitButton
                       name="action"
                       value="reject"
+                      confirmMessage={`Reject the update for ${update.projectName}?`}
+                      pendingLabel="Rejecting..."
                       className="rounded-full border border-rose-500/16 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16"
                     >
                       Reject
-                    </button>
+                    </ConfirmSubmitButton>
                   </div>
                 </form>
               )}
