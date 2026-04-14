@@ -36,6 +36,7 @@ declare global {
 }
 
 const DEMO_DB_PATH = join(process.cwd(), ".data", "demo-db.json");
+const CAN_PERSIST_DEMO_DB = !process.env.VERCEL && process.env.NODE_ENV !== "production";
 
 type DashboardData = {
   users: AppUser[];
@@ -264,15 +265,28 @@ function createSeedDatabase(): DemoDatabase {
 }
 
 function ensureDemoDbDirectory() {
+  if (!CAN_PERSIST_DEMO_DB) {
+    return;
+  }
   mkdirSync(dirname(DEMO_DB_PATH), { recursive: true });
 }
 
 function saveDb(db: DemoDatabase) {
+  if (!CAN_PERSIST_DEMO_DB) {
+    return;
+  }
   ensureDemoDbDirectory();
-  writeFileSync(DEMO_DB_PATH, JSON.stringify(db, null, 2));
+  try {
+    writeFileSync(DEMO_DB_PATH, JSON.stringify(db, null, 2));
+  } catch {
+    // Ignore persistence failures in environments with ephemeral or read-only filesystems.
+  }
 }
 
 function loadDbFromDisk() {
+  if (!CAN_PERSIST_DEMO_DB) {
+    return null;
+  }
   if (!existsSync(DEMO_DB_PATH)) {
     return null;
   }
