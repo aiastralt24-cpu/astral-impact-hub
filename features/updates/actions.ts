@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
-import { createUpdate, recordApproval } from "@/lib/data/demo-store";
+import { createUpdate, deleteMediaAssetById, findMediaAsset, getDashboardData, recordApproval } from "@/lib/data/demo-store";
+import { deleteMedia, uploadMedia } from "@/lib/media/storage";
 import type { ApprovalRecord } from "@/types/domain";
 
 export async function createUpdateAction(payload: {
@@ -26,9 +27,32 @@ export async function createUpdateAction(payload: {
   urgent: boolean;
   documentationOnly: boolean;
   sensitiveContent: boolean;
-  mediaNames: string[];
+  mediaFiles: Array<{
+    name: string;
+    mimeType?: string;
+    sizeBytes?: number;
+  }>;
 }) {
   const session = await requireSession();
+  const scopedData = await getDashboardData(session);
+  const project = scopedData.projects.find((entry) => entry.id === payload.projectId);
+  const vendor = scopedData.vendors.find((entry) => entry.id === payload.vendorId);
+  if (!project || !vendor) {
+    return;
+  }
+
+  const media = await uploadMedia(
+    payload.mediaFiles.map((file) => ({
+      filename: file.name,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes
+    })),
+    {
+      actor: session,
+      project,
+      vendor
+    }
+  );
 
   await createUpdate({
     projectId: payload.projectId,
@@ -51,16 +75,20 @@ export async function createUpdateAction(payload: {
     urgent: payload.urgent,
     documentationOnly: payload.documentationOnly,
     sensitiveContent: payload.sensitiveContent,
-    media: payload.mediaNames.map((name) => ({ id: crypto.randomUUID(), name }))
+    media
   });
 
   revalidatePath("/updates");
   revalidatePath("/dashboard");
   revalidatePath("/analytics");
+  revalidatePath("/media");
 }
 
 export async function approvalAction(formData: FormData) {
   const session = await requireSession();
+  if (session.role === "vendor") {
+    return;
+  }
   await recordApproval({
     updateId: String(formData.get("updateId") ?? ""),
     reviewerId: session.id,
@@ -69,6 +97,41 @@ export async function approvalAction(formData: FormData) {
     comment: String(formData.get("comment") ?? "")
   });
 
+  revalidatePath("/updates");
+  revalidatePath("/dashboard");
+  revalidatePath("/analytics");
+}
+
+export async function deleteMediaAction(formData: FormData) {
+  const session = await requireSession();
+  const mediaAssetId = String(formData.get("mediaAssetId") ?? "");
+  if (!mediaAssetId) {
+    return;
+  }
+
+  const mediaEntry = await findMediaAsset(mediaAssetId);
+  if (!mediaEntry) {
+    return;
+  }
+
+  const scopedData = await getDashboardData(session);
+  const canAccessProject = scopedData.projects.some((project) => project.id === mediaEntry.update.projectId);
+  const canAccessVendor = scopedData.vendors.some((vendor) => vendor.id === mediaEntry.update.vendorId);
+  const canDelete =
+    session.isSuperAdmin ||
+    session.role === "admin" ||
+    ((session.role === "vendor" || session.role === "project_manager" || session.role === "content_team" || session.role === "leadership") &&
+      canAccessProject &&
+      canAccessVendor);
+
+  if (!canDelete) {
+    return;
+  }
+
+  await deleteMedia(mediaEntry.media, { actor: session });
+  await deleteMediaAssetById(mediaAssetId);
+
+  revalidatePath("/media");
   revalidatePath("/updates");
   revalidatePath("/dashboard");
   revalidatePath("/analytics");

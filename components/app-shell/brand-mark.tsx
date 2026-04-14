@@ -11,11 +11,11 @@ type BrandMarkProps = {
 
 export function BrandMark({ compact = false, dark = false, className }: BrandMarkProps) {
   return (
-    <Link href="/" className={cn("flex items-center gap-4", className)}>
+    <Link href="/" className={cn("flex items-center gap-3", className)}>
       <div
         className={cn(
-          "overflow-hidden rounded-2xl border border-white/20 shadow-lg",
-          compact ? "h-12 w-12" : "h-16 w-16",
+          "overflow-hidden rounded-[20px] border border-white/20 shadow-[0_10px_24px_rgba(0,0,0,0.08)]",
+          compact ? "h-12 w-12" : "h-14 w-14",
           dark ? "border-white/15" : "border-[var(--border)]"
         )}
       >
@@ -30,10 +30,10 @@ export function BrandMark({ compact = false, dark = false, className }: BrandMar
       </div>
       {compact ? null : (
         <div className="min-w-0">
-          <p className={cn("font-display text-xl font-black tracking-[0.02em]", dark ? "text-[var(--foreground)]" : "text-[var(--primary)]")}>
+          <p className={cn("font-display text-[1.15rem] font-black leading-none tracking-[-0.02em]", dark ? "text-[var(--foreground)]" : "text-[var(--primary)]")}>
             Astral Foundation
           </p>
-          <p className={cn("text-sm", dark ? "text-[var(--gray-mid)]" : "text-[var(--gray-mid)]")}>Impact Hub</p>
+          <p className={cn("mt-1 text-sm leading-none", dark ? "text-[var(--gray-mid)]" : "text-[var(--gray-mid)]")}>Impact Hub</p>
         </div>
       )}
     </Link>

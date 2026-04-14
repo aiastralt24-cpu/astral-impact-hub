@@ -3,7 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getUserById, getUserByRole } from "@/lib/data/demo-store";
+import { getUserByCredentials, getUserById } from "@/lib/data/demo-store";
 import type { AppUser } from "@/types/domain";
 
 const SESSION_COOKIE = "astral-session-user";
@@ -26,8 +26,8 @@ export async function requireSession() {
   return session;
 }
 
-export async function signInAsRole(role: AppUser["role"]) {
-  const user = await getUserByRole(role);
+export async function signInWithCredentials(username: string, password: string) {
+  const user = await getUserByCredentials(username, password);
   if (!user) {
     return null;
   }

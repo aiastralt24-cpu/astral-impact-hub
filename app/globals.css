@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --brand-blue: #0059ff;
   --font-display: "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif;
   --font-body: "Inter", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
@@ -10,11 +11,11 @@
   --card: rgba(255, 255, 255, 0.82);
   --card-foreground: #121a27;
   --border: rgba(18, 26, 39, 0.08);
-  --primary: #5d63ff;
-  --primary-mid: #7a84ff;
-  --primary-light: rgba(93, 99, 255, 0.08);
+  --primary: #0059ff;
+  --primary-mid: #4b88ff;
+  --primary-light: rgba(0, 89, 255, 0.08);
   --accent-orange: #d98b4d;
-  --accent-blue: #6b8cff;
+  --accent-blue: #0059ff;
   --amber: #b7791f;
   --red: #d4556b;
   --teal: #2ea6a6;

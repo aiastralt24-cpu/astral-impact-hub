@@ -197,38 +197,38 @@ create policy "users read self or admin" on public.users
 for select using (
   auth.uid() = auth_user_id
   or exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
-      and current_user.role = 'admin'
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
+      and app_user.role = 'admin'
   )
 );
 
 create policy "admin full vendors" on public.vendors
 for all using (
   exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
-      and current_user.role = 'admin'
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
+      and app_user.role = 'admin'
   )
 );
 
 create policy "project read by privileged roles" on public.projects
 for select using (
   exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
-      and current_user.role in ('admin', 'project_manager', 'content_team', 'leadership')
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
+      and app_user.role in ('admin', 'project_manager', 'content_team', 'leadership')
   )
 );
 
 create policy "project update by managers and admins" on public.projects
 for update using (
   exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
       and (
-        current_user.role = 'admin'
-        or (current_user.role = 'project_manager' and public.projects.internal_owner_id = current_user.id)
+        app_user.role = 'admin'
+        or (app_user.role = 'project_manager' and public.projects.internal_owner_id = app_user.id)
       )
   )
 );
@@ -236,16 +236,16 @@ for update using (
 create policy "updates by permitted roles" on public.updates
 for select using (
   exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
       and (
-        current_user.role = 'admin'
-        or current_user.role = 'content_team'
-        or current_user.role = 'leadership'
-        or (current_user.role = 'project_manager' and public.updates.project_id in (
-          select p.id from public.projects p where p.internal_owner_id = current_user.id
+        app_user.role = 'admin'
+        or app_user.role = 'content_team'
+        or app_user.role = 'leadership'
+        or (app_user.role = 'project_manager' and public.updates.project_id in (
+          select p.id from public.projects p where p.internal_owner_id = app_user.id
         ))
-        or (current_user.role = 'vendor' and public.updates.submitted_by_user_id = current_user.id)
+        or (app_user.role = 'vendor' and public.updates.submitted_by_user_id = app_user.id)
       )
   )
 );
@@ -253,18 +253,18 @@ for select using (
 create policy "vendors manage own updates" on public.updates
 for insert with check (
   exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
-      and current_user.role = 'vendor'
-      and current_user.id = public.updates.submitted_by_user_id
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
+      and app_user.role = 'vendor'
+      and app_user.id = public.updates.submitted_by_user_id
   )
 );
 
 create policy "admin and manager approvals" on public.approvals
 for all using (
   exists (
-    select 1 from public.users current_user
-    where current_user.auth_user_id = auth.uid()
-      and current_user.role in ('admin', 'project_manager', 'content_team')
+    select 1 from public.users app_user
+    where app_user.auth_user_id = auth.uid()
+      and app_user.role in ('admin', 'project_manager', 'content_team')
   )
 );

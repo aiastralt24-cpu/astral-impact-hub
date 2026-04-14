@@ -36,6 +36,12 @@ type FlagField = {
   setChecked: (value: boolean) => void;
 };
 
+type MediaSelection = {
+  name: string;
+  mimeType?: string;
+  sizeBytes?: number;
+};
+
 export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizardProps) {
   const [step, setStep] = useState(0);
   const [status, setStatus] = useState<string | null>(null);
@@ -50,7 +56,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
   const [quote, setQuote] = useState("");
   const [challenges, setChallenges] = useState("");
   const [nextSteps, setNextSteps] = useState("");
-  const [mediaNames, setMediaNames] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<MediaSelection[]>([]);
   const [socialMediaWorthy, setSocialMediaWorthy] = useState(true);
   const [urgent, setUrgent] = useState(false);
   const [documentationOnly, setDocumentationOnly] = useState(false);
@@ -81,63 +87,101 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
     { label: "Sensitive content", checked: sensitiveContent, setChecked: setSensitiveContent }
   ];
 
+  const reviewItems = [
+    { label: "Project", value: selectedProject?.name ?? "No project selected" },
+    { label: "Vendor", value: selectedVendor?.name ?? "No vendor selected" },
+    { label: "Progress", value: `${progressPercent}% complete` },
+    { label: "Media", value: `${mediaFiles.length} file${mediaFiles.length === 1 ? "" : "s"}` },
+    { label: "Beneficiaries", value: beneficiariesCount ? `${beneficiariesCount} ${beneficiaryType}` : "Not added yet" },
+    { label: "Readiness", value: socialMediaWorthy ? "Strong publishing potential" : "Documentation first" }
+  ];
+
+  const projectSummary = [
+    { label: "Vendor", value: selectedVendor?.name ?? "Assigned automatically" },
+    { label: "Location", value: selectedProject?.location ?? "Will be added from project record" },
+    { label: "Reporting", value: selectedProject?.reportingFrequency ?? "Not set" }
+  ];
+
+  const reviewSections = [
+    {
+      title: "Field summary",
+      value: description || "No field summary added yet."
+    },
+    {
+      title: "Impact snapshot",
+      value: beneficiariesCount ? `${beneficiariesCount} ${beneficiaryType}, ${progressPercent}% progress` : `${progressPercent}% progress, beneficiaries not added yet`
+    },
+    {
+      title: "Story layer",
+      value: [whyItMatters, highlightMoment, quote].filter(Boolean).join(" • ") || "No story details added yet."
+    },
+    {
+      title: "Flags and media",
+      value:
+        `${mediaFiles.length} media file${mediaFiles.length === 1 ? "" : "s"} • ${flagFields
+          .filter((field) => field.checked)
+          .map((field) => field.label)
+          .join(", ") || "No special flags selected"}`
+    }
+  ];
+
   return (
     <div className="glass-card overflow-hidden rounded-[32px]">
       <div className="border-b border-[var(--border)] px-6 py-5 sm:px-7">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,0.62fr)_minmax(0,1.38fr)] xl:items-start">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="inline-flex rounded-full bg-[var(--primary-light)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
+              <span className="inline-flex rounded-full bg-[var(--primary-light)] px-3 py-1.5 text-xs font-semibold text-[var(--primary)]">
                 Step {step + 1} of {steps.length}
               </span>
               <span className="text-xs uppercase tracking-[0.22em] text-[var(--gray-mid)]">{progress}% complete</span>
             </div>
             <div>
-              <h2 className="font-display text-[28px] font-black tracking-[-0.04em] text-[var(--foreground)]">{stepConfig.title}</h2>
-              <p className="mt-1 text-sm text-[var(--gray-mid)]">{stepConfig.description}</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--accent-blue)]">Submission workspace</p>
+              <h2 className="mt-2 font-display text-[24px] font-black tracking-[-0.04em] text-[var(--foreground)] sm:text-[30px]">{stepConfig.title}</h2>
+              <p className="mt-2 max-w-md text-sm leading-6 text-[var(--gray-mid)]">{stepConfig.description}</p>
             </div>
           </div>
 
-          <div className="w-full max-w-sm">
+          <div className="space-y-4 xl:pt-1">
             <div className="h-2 rounded-full bg-[#e9edf5]">
-              <div className="h-2 rounded-full bg-[linear-gradient(90deg,#5d63ff,#95a2ff)] transition-all" style={{ width: `${progress}%` }} />
+              <div className="h-2 rounded-full bg-[linear-gradient(90deg,var(--primary),#89a8ff)] transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {steps.map((item, index) => {
+                const Icon = item.icon;
+                const active = index === step;
+                const complete = index < step;
+
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setStep(index)}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition",
+                      active
+                        ? "border-[var(--primary)]/24 bg-[var(--primary-light)] text-[var(--primary)]"
+                        : complete
+                          ? "border-[var(--border)] bg-white text-[var(--foreground)]"
+                          : "border-[var(--border)] bg-[#f8f9fc] text-[var(--gray-mid)] hover:bg-white"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {steps.map((item, index) => {
-            const Icon = item.icon;
-            const active = index === step;
-            const complete = index < step;
-
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => setStep(index)}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
-                  active
-                    ? "border-[var(--primary)]/22 bg-[var(--primary-light)] text-[var(--primary)]"
-                    : complete
-                      ? "border-[var(--border)] bg-white text-[var(--foreground)]"
-                      : "border-[var(--border)] bg-[#f8f9fc] text-[var(--gray-mid)] hover:bg-white"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
         </div>
       </div>
 
-      <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1.4fr)_350px]">
         <div className="px-6 py-6 sm:px-7">
           {step === 0 ? (
             <div className="space-y-5">
-              <label className="block">
+              <label className="block max-w-xl">
                 <span className="mb-2 block text-sm font-medium text-[var(--foreground)]">Project</span>
                 <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="h-12 w-full rounded-2xl px-4">
                   {projects.map((project) => (
@@ -147,10 +191,20 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                   ))}
                 </select>
               </label>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                {projectSummary.map((item) => (
+                  <div key={item.label} className="rounded-[22px] border border-[var(--border)] bg-[#f8f9fc] p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--gray-mid)]">{item.label}</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--foreground)]">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
               <div className="rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
                 <p className="text-sm font-medium text-[var(--foreground)]">What happens next</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--gray-mid)]">
-                  The project, assigned vendor, and workflow context are filled in automatically once you continue.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">
+                  Once you continue, the selected project, vendor, and project rules carry through the rest of the submission.
                 </p>
               </div>
             </div>
@@ -227,18 +281,26 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                 <input
                   type="file"
                   multiple
-                  onChange={(event) => setMediaNames(Array.from(event.target.files ?? []).map((file) => file.name))}
+                  onChange={(event) =>
+                    setMediaFiles(
+                      Array.from(event.target.files ?? []).map((file) => ({
+                        name: file.name,
+                        mimeType: file.type,
+                        sizeBytes: file.size
+                      }))
+                    )
+                  }
                   className="block w-full text-sm"
                 />
               </label>
               <div className="rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
-                <p className="text-sm text-[var(--gray-mid)]">Demo mode stores file names for flow testing.</p>
+                <p className="text-sm text-[var(--gray-mid)]">Media metadata is saved into the app, while heavy files are routed through the external media layer.</p>
               </div>
-              {mediaNames.length ? (
+              {mediaFiles.length ? (
                 <div className="flex flex-wrap gap-2">
-                  {mediaNames.map((name) => (
-                    <span key={name} className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs text-[var(--foreground)]">
-                      {name}
+                  {mediaFiles.map((file) => (
+                    <span key={file.name} className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs text-[var(--foreground)]">
+                      {file.name}
                     </span>
                   ))}
                 </div>
@@ -258,28 +320,47 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
           ) : null}
 
           {step === 6 ? (
-            <div className="space-y-4 rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-5">
-              <p className="font-display text-2xl font-black tracking-[-0.03em] text-[var(--foreground)]">{selectedProject?.name}</p>
-              <p className="text-sm leading-6 text-[var(--gray-mid)]">{description || "No description added yet."}</p>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl bg-white p-4 ring-1 ring-[var(--border)]">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">Media</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{mediaNames.length}</p>
+            <div className="space-y-5">
+              <div className="rounded-[28px] border border-[var(--border)] bg-[#f8f9fc] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="font-display text-[30px] font-black leading-[1.02] tracking-[-0.05em] text-[var(--foreground)]">
+                      {selectedProject?.name}
+                    </p>
+                    <p className="text-sm text-[var(--gray-mid)]">{selectedVendor?.name ?? "No vendor assigned"}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {reviewItems.slice(2).map((item) => (
+                      <span key={item.label} className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs font-medium text-[var(--foreground)]">
+                        {item.value}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="rounded-2xl bg-white p-4 ring-1 ring-[var(--border)]">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">Vendor</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{selectedVendor?.name ?? "Unassigned"}</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4 ring-1 ring-[var(--border)]">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">Readiness</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">Calculated on submit</p>
-                </div>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                {reviewSections.map((section) => (
+                  <div key={section.title} className="rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-5">
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--gray-mid)]">{section.title}</p>
+                    <p className="mt-3 text-sm leading-7 text-[var(--foreground)]">{section.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {reviewItems.slice(0, 3).map((item) => (
+                  <div key={item.label} className="rounded-[22px] border border-[var(--border)] bg-white p-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">{item.label}</p>
+                    <p className="mt-2 text-base font-semibold leading-7 text-[var(--foreground)]">{item.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           ) : null}
         </div>
 
-        <aside className="border-t border-[var(--border)] bg-[#f8f9fc] px-6 py-6 lg:border-l lg:border-t-0">
+        <aside className="border-t border-[var(--border)] bg-[#f8f9fc] px-6 py-6 xl:border-l xl:border-t-0">
           <div className="space-y-5">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-[var(--gray-mid)]">Current context</p>
@@ -290,7 +371,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
             </div>
 
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--gray-mid)]">What this step needs</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--gray-mid)]">Step focus</p>
               <div className="mt-3 rounded-[24px] border border-[var(--border)] bg-white p-4">
                 <p className="text-sm leading-6 text-[var(--gray-mid)]">{stepConfig.description}</p>
               </div>
@@ -309,15 +390,26 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                 {status ? <p className="mt-4 text-sm text-[var(--gray-mid)]">{status}</p> : null}
               </div>
             </div>
+
+            {step < 6 ? (
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--gray-mid)]">Before you continue</p>
+                <div className="mt-3 rounded-[24px] border border-[var(--border)] bg-white p-4">
+                  <p className="text-sm leading-6 text-[var(--gray-mid)]">
+                    Keep each step concise. The approval team should be able to understand the work, evidence, and story without guessing.
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </aside>
       </div>
 
-      <div className="flex items-center justify-between border-t border-[var(--border)] bg-white/72 px-6 py-4 sm:px-7">
+      <div className="flex items-center justify-between border-t border-[var(--border)] bg-white/82 px-6 py-4 sm:px-7">
         <button
           type="button"
           onClick={() => setStep((current) => Math.max(0, current - 1))}
-          className="rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm text-[var(--gray-mid)] transition-colors hover:bg-[#f7f8fc] hover:text-[var(--foreground)]"
+          className="rounded-full border border-[var(--border)] bg-white px-5 py-2.5 text-sm text-[var(--gray-mid)] transition-colors hover:bg-[#f7f8fc] hover:text-[var(--foreground)]"
         >
           Back
         </button>
@@ -327,7 +419,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
               type="button"
               disabled={!canAdvance}
               onClick={() => setStep((current) => Math.min(steps.length - 1, current + 1))}
-              className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.22)] transition-all hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
+              className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-medium text-white shadow-[0_14px_28px_rgba(0,89,255,0.22)] transition-all hover:-translate-y-0.5 hover:brightness-105 disabled:opacity-40"
             >
               Continue
             </button>
@@ -358,15 +450,15 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                     urgent,
                     documentationOnly,
                     sensitiveContent,
-                    mediaNames
+                    mediaFiles
                   });
                   setStatus("Update submitted.");
                   setStep(0);
                   setDescription("");
-                  setMediaNames([]);
+                  setMediaFiles([]);
                 });
               }}
-              className="rounded-full bg-[var(--primary)] px-5 py-2 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.22)] transition-colors hover:brightness-105"
+              className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-medium text-white shadow-[0_14px_28px_rgba(0,89,255,0.22)] transition-colors hover:brightness-105"
             >
               Submit update
             </button>

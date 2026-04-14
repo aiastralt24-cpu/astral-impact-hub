@@ -2,12 +2,19 @@ export type AppRole = "admin" | "project_manager" | "vendor" | "content_team" | 
 export type ProjectStatus = "draft" | "active" | "on_hold" | "at_risk" | "completed" | "archived";
 export type UpdateStatus = "draft" | "pending" | "in_review" | "revision_requested" | "approved" | "rejected" | "published";
 export type DistributionChannel = "telegram" | "whatsapp" | "instagram";
+export type MediaStorageProvider = "supabase";
 
 export type AppUser = {
   id: string;
   fullName: string;
   email: string;
+  username: string;
+  password: string;
   role: AppRole;
+  assignedProjectIds: string[];
+  assignedVendorIds: string[];
+  managedByUserId?: string;
+  isSuperAdmin?: boolean;
 };
 
 export type MetricTile = {
@@ -60,6 +67,14 @@ export type ProjectRecord = {
 export type UpdateMediaRecord = {
   id: string;
   name: string;
+  storageProvider: MediaStorageProvider;
+  externalFileId: string;
+  externalFolderId: string;
+  externalUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByUserId: string;
+  uploadedAt: string;
   caption?: string;
 };
 

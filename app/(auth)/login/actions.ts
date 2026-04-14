@@ -2,15 +2,20 @@
 
 import { redirect } from "next/navigation";
 
-import { signInAsRole } from "@/lib/auth/session";
-import type { AppUser } from "@/types/domain";
+import { signInWithCredentials } from "@/lib/auth/session";
 
 export async function loginAction(formData: FormData) {
-  const role = formData.get("role") as AppUser["role"] | null;
-  if (!role) {
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!username || !password) {
     return;
   }
 
-  await signInAsRole(role);
+  const session = await signInWithCredentials(username, password);
+  if (!session) {
+    redirect("/login?error=invalid_credentials");
+  }
+
   redirect("/dashboard");
 }

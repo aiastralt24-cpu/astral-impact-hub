@@ -23,7 +23,8 @@ Astral Impact Hub is a greenfield Next.js + Supabase platform scaffolded from th
 3. Fill `.env.example` values into `.env.local`
 4. Connect a Supabase project and apply `supabase/migrations/0001_initial_schema.sql`
 5. Swap the demo store in `lib/data/demo-store.ts` for live Supabase repositories
-6. Connect the repo to Vercel and GitHub
+6. Configure Supabase Storage with the `project-media` bucket (or update `NEXT_PUBLIC_SUPABASE_MEDIA_BUCKET`)
+7. Connect the repo to Vercel and GitHub
 
 ## Project structure
 - `app/` routes, layouts, API entry points
