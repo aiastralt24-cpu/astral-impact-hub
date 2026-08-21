@@ -1,12 +1,15 @@
 import "server-only";
 
 import type { AppUser, MediaStorageProvider, ProjectRecord, UpdateMediaRecord, VendorRecord } from "@/types/domain";
+import { createServiceRoleClient } from "@/lib/supabase/server";
+import { hasSupabaseBackend } from "@/lib/env";
 
 type MediaUploadInput = {
   filename: string;
   mimeType?: string;
   sizeBytes?: number;
   caption?: string;
+  data?: ArrayBuffer;
 };
 
 type MediaUploadContext = {
@@ -74,14 +77,23 @@ class DemoSupabaseStorageService implements MediaStorageService {
 
   async uploadMedia(files: MediaUploadInput[], context: MediaUploadContext) {
     const folderPath = await this.resolveProjectFolder(context.project, context.vendor);
+    const supabase = hasSupabaseBackend ? createServiceRoleClient() : null;
 
-    return files.map((file) => {
+    return Promise.all(files.map(async (file) => {
       const externalFileId = crypto.randomUUID();
       const storedFilename = `${externalFileId}-${sanitizeFilename(file.filename)}`;
+      const storagePath = `${folderPath}/${storedFilename}`;
+      if (supabase && file.data) {
+        const { error } = await supabase.storage.from(SUPABASE_MEDIA_BUCKET).upload(storagePath, file.data, {
+          contentType: file.mimeType || inferMimeType(file.filename),
+          upsert: false
+        });
+        if (error) throw new Error(`Could not upload ${file.filename}: ${error.message}`);
+      }
       const publicBase = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
       const externalUrl = publicBase
-        ? `${publicBase}/storage/v1/object/public/${SUPABASE_MEDIA_BUCKET}/${folderPath}/${storedFilename}`
-        : `supabase://${SUPABASE_MEDIA_BUCKET}/${folderPath}/${storedFilename}`;
+        ? `${publicBase}/storage/v1/object/public/${SUPABASE_MEDIA_BUCKET}/${storagePath}`
+        : `supabase://${SUPABASE_MEDIA_BUCKET}/${storagePath}`;
 
       return {
         id: crypto.randomUUID(),
@@ -96,7 +108,7 @@ class DemoSupabaseStorageService implements MediaStorageService {
         uploadedByUserId: context.actor.id,
         uploadedAt: new Date().toISOString()
       };
-    });
+    }));
   }
 
   async deleteMedia(_media: UpdateMediaRecord, _context: MediaAccessContext) {

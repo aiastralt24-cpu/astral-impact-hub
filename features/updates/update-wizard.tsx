@@ -1,7 +1,7 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
-import { ClipboardList, FileImage, Flag, MessagesSquare, Sparkles, Target, Telescope } from "lucide-react";
+import { startTransition, useEffect, useMemo, useState } from "react";
+import { ClipboardList, FileImage, Flag, MessagesSquare, Sparkles, Target, Telescope, X } from "lucide-react";
 
 import { createUpdateAction } from "@/features/updates/actions";
 import { cn } from "@/lib/utils";
@@ -36,11 +36,7 @@ type FlagField = {
   setChecked: (value: boolean) => void;
 };
 
-type MediaSelection = {
-  name: string;
-  mimeType?: string;
-  sizeBytes?: number;
-};
+const DRAFT_KEY = "foundation-hub:update-draft:v1";
 
 export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizardProps) {
   const [step, setStep] = useState(0);
@@ -56,15 +52,74 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
   const [quote, setQuote] = useState("");
   const [challenges, setChallenges] = useState("");
   const [nextSteps, setNextSteps] = useState("");
-  const [mediaFiles, setMediaFiles] = useState<MediaSelection[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [socialMediaWorthy, setSocialMediaWorthy] = useState(true);
   const [urgent, setUrgent] = useState(false);
   const [documentationOnly, setDocumentationOnly] = useState(false);
   const [sensitiveContent, setSensitiveContent] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved) as Record<string, unknown>;
+        setProjectId(String(draft.projectId ?? projects[0]?.id ?? ""));
+        setDescription(String(draft.description ?? ""));
+        setBeneficiariesCount(String(draft.beneficiariesCount ?? ""));
+        setBeneficiaryType(String(draft.beneficiaryType ?? "People"));
+        setProgressPercent(Number(draft.progressPercent ?? 50));
+        setWorkDuration(String(draft.workDuration ?? "full_day"));
+        setWhyItMatters(String(draft.whyItMatters ?? ""));
+        setHighlightMoment(String(draft.highlightMoment ?? ""));
+        setQuote(String(draft.quote ?? ""));
+        setChallenges(String(draft.challenges ?? ""));
+        setNextSteps(String(draft.nextSteps ?? ""));
+        setSocialMediaWorthy(Boolean(draft.socialMediaWorthy ?? true));
+        setUrgent(Boolean(draft.urgent));
+        setDocumentationOnly(Boolean(draft.documentationOnly));
+        setSensitiveContent(Boolean(draft.sensitiveContent));
+        setLastSavedAt(typeof draft.savedAt === "string" ? draft.savedAt : null);
+        setStatus("Draft restored. Please re-select any media files.");
+      }
+    } catch {
+      window.localStorage.removeItem(DRAFT_KEY);
+    } finally {
+      setDraftReady(true);
+    }
+  }, [projects]);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    const timer = window.setTimeout(() => {
+      const hasDraftContent = Boolean(
+        description.trim() || beneficiariesCount || whyItMatters.trim() || highlightMoment.trim() || quote.trim() || challenges.trim() || nextSteps.trim()
+      );
+      if (!hasDraftContent) {
+        window.localStorage.removeItem(DRAFT_KEY);
+        setLastSavedAt(null);
+        return;
+      }
+      const savedAt = new Date().toISOString();
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        projectId, description, beneficiariesCount, beneficiaryType, progressPercent, workDuration,
+        whyItMatters, highlightMoment, quote, challenges, nextSteps, socialMediaWorthy, urgent,
+        documentationOnly, sensitiveContent, savedAt
+      }));
+      setLastSavedAt(savedAt);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [draftReady, projectId, description, beneficiariesCount, beneficiaryType, progressPercent, workDuration, whyItMatters, highlightMoment, quote, challenges, nextSteps, socialMediaWorthy, urgent, documentationOnly, sensitiveContent]);
 
   const selectedProject = useMemo(() => projects.find((project) => project.id === projectId), [projectId, projects]);
   const selectedVendor = useMemo(
-    () => vendors.find((vendor) => vendor.id === (defaultVendorId || selectedProject?.vendorIds[0] || vendors[0]?.id)),
+    () => {
+      const assignedIds = selectedProject?.vendorIds ?? [];
+      const preferredId = defaultVendorId && assignedIds.includes(defaultVendorId) ? defaultVendorId : assignedIds[0];
+      return vendors.find((vendor) => vendor.id === preferredId);
+    },
     [defaultVendorId, selectedProject, vendors]
   );
 
@@ -281,15 +336,14 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                 <input
                   type="file"
                   multiple
-                  onChange={(event) =>
-                    setMediaFiles(
-                      Array.from(event.target.files ?? []).map((file) => ({
-                        name: file.name,
-                        mimeType: file.type,
-                        sizeBytes: file.size
-                      }))
-                    )
-                  }
+                  accept="image/*,video/*"
+                  onChange={(event) => {
+                    const additions = Array.from(event.target.files ?? []);
+                    setMediaFiles((current) => [...current, ...additions.filter((file) =>
+                      !current.some((existing) => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified)
+                    )]);
+                    event.target.value = "";
+                  }}
                   className="block w-full text-sm"
                 />
               </label>
@@ -298,9 +352,12 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
               </div>
               {mediaFiles.length ? (
                 <div className="flex flex-wrap gap-2">
-                  {mediaFiles.map((file) => (
-                    <span key={file.name} className="rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs text-[var(--foreground)]">
+                  {mediaFiles.map((file, index) => (
+                    <span key={`${file.name}-${file.lastModified}`} className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-3 py-2 text-xs text-[var(--foreground)]">
                       {file.name}
+                      <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setMediaFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -388,6 +445,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                   <div className="h-2 rounded-full bg-[linear-gradient(90deg,#5d63ff,#95a2ff)]" style={{ width: `${progress}%` }} />
                 </div>
                 {status ? <p className="mt-4 text-sm text-[var(--gray-mid)]">{status}</p> : null}
+                {lastSavedAt ? <p className="mt-2 text-xs text-[var(--gray-mid)]">Draft saved {new Date(lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p> : null}
               </div>
             </div>
 
@@ -426,42 +484,55 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
           ) : (
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => {
-                if (!selectedProject || !selectedVendor) return;
+                if (!selectedProject || !selectedVendor) {
+                  setStatus("This project needs an assigned vendor before an update can be submitted.");
+                  return;
+                }
                 if (!window.confirm("Do you want to submit this update now?")) return;
                 setStatus("Submitting update...");
+                setIsSubmitting(true);
                 startTransition(async () => {
-                  await createUpdateAction({
-                    projectId: selectedProject.id,
-                    projectName: selectedProject.name,
-                    vendorId: selectedVendor.id,
-                    vendorName: selectedVendor.name,
-                    happenedAt: new Date().toISOString().slice(0, 10),
-                    description,
-                    beneficiariesCount: beneficiariesCount ? Number(beneficiariesCount) : undefined,
-                    beneficiaryType,
-                    progressPercent,
-                    workDuration,
-                    whyItMatters,
-                    highlightMoment,
-                    quote,
-                    challenges,
-                    nextSteps,
-                    socialMediaWorthy,
-                    urgent,
-                    documentationOnly,
-                    sensitiveContent,
-                    mediaFiles
-                  });
-                  setStatus("Update submitted.");
+                  const formData = new FormData();
+                  const fields = {
+                    projectId: selectedProject.id, vendorId: selectedVendor.id,
+                    happenedAt: new Date().toISOString().slice(0, 10), description,
+                    beneficiariesCount, beneficiaryType, progressPercent: String(progressPercent), workDuration,
+                    whyItMatters, highlightMoment, quote, challenges, nextSteps,
+                    socialMediaWorthy: String(socialMediaWorthy), urgent: String(urgent),
+                    documentationOnly: String(documentationOnly), sensitiveContent: String(sensitiveContent)
+                  };
+                  Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
+                  mediaFiles.forEach((file) => formData.append("mediaFiles", file));
+                  const result = await createUpdateAction(formData);
+                  setStatus(result.message);
+                  setIsSubmitting(false);
+                  if (!result.ok) return;
+                  window.localStorage.removeItem(DRAFT_KEY);
+                  setDraftReady(false);
                   setStep(0);
                   setDescription("");
+                  setBeneficiariesCount("");
+                  setBeneficiaryType("People");
+                  setProgressPercent(50);
+                  setWorkDuration("full_day");
+                  setWhyItMatters("");
+                  setHighlightMoment("");
+                  setQuote("");
+                  setChallenges("");
+                  setNextSteps("");
+                  setUrgent(false);
+                  setDocumentationOnly(false);
+                  setSensitiveContent(false);
                   setMediaFiles([]);
+                  setLastSavedAt(null);
+                  window.setTimeout(() => setDraftReady(true), 0);
                 });
               }}
-              className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-medium text-white shadow-[0_14px_28px_rgba(0,89,255,0.22)] transition-colors hover:brightness-105"
+              className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-medium text-white shadow-[0_14px_28px_rgba(0,89,255,0.22)] transition-colors hover:brightness-105 disabled:cursor-wait disabled:opacity-60"
             >
-              Submit update
+              {isSubmitting ? "Submitting..." : "Submit update"}
             </button>
           )}
         </div>

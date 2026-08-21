@@ -7,46 +7,38 @@ import { createUpdate, deleteMediaAssetById, findMediaAsset, getDashboardData, r
 import { deleteMedia, uploadMedia } from "@/lib/media/storage";
 import type { ApprovalRecord } from "@/types/domain";
 
-export async function createUpdateAction(payload: {
-  projectId: string;
-  projectName: string;
-  vendorId: string;
-  vendorName: string;
-  happenedAt: string;
-  description: string;
-  beneficiariesCount?: number;
-  beneficiaryType?: string;
-  progressPercent: number;
-  workDuration?: string;
-  whyItMatters?: string;
-  highlightMoment?: string;
-  quote?: string;
-  challenges?: string;
-  nextSteps?: string;
-  socialMediaWorthy: boolean;
-  urgent: boolean;
-  documentationOnly: boolean;
-  sensitiveContent: boolean;
-  mediaFiles: Array<{
-    name: string;
-    mimeType?: string;
-    sizeBytes?: number;
-  }>;
-}) {
-  const session = await requireSession();
-  const scopedData = await getDashboardData(session);
-  const project = scopedData.projects.find((entry) => entry.id === payload.projectId);
-  const vendor = scopedData.vendors.find((entry) => entry.id === payload.vendorId);
-  if (!project || !vendor) {
-    return;
-  }
+export type CreateUpdateResult = { ok: true; message: string } | { ok: false; message: string };
 
-  const media = await uploadMedia(
-    payload.mediaFiles.map((file) => ({
+export async function createUpdateAction(formData: FormData): Promise<CreateUpdateResult> {
+  try {
+    const session = await requireSession();
+    const projectId = String(formData.get("projectId") ?? "");
+    const vendorId = String(formData.get("vendorId") ?? "");
+    const description = String(formData.get("description") ?? "").trim();
+    const progressPercent = Number(formData.get("progressPercent") ?? 0);
+    if (!projectId || !vendorId) return { ok: false, message: "Select a valid project and vendor." };
+    if (description.length < 21) return { ok: false, message: "Describe the activity in at least 21 characters." };
+    if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) {
+      return { ok: false, message: "Progress must be between 0 and 100." };
+    }
+
+    const scopedData = await getDashboardData(session);
+    const project = scopedData.projects.find((entry) => entry.id === projectId);
+    const vendor = scopedData.vendors.find((entry) => entry.id === vendorId && entry.assignedProjectIds.includes(projectId));
+    if (!project || !vendor) return { ok: false, message: "This project or vendor is no longer available to your account." };
+    const files = formData.getAll("mediaFiles").filter((entry): entry is File => entry instanceof File && entry.size > 0);
+    const invalidFile = files.find((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"));
+    if (invalidFile) return { ok: false, message: `${invalidFile.name} is not a supported image or video.` };
+    const oversizedFile = files.find((file) => file.size > 25 * 1024 * 1024);
+    if (oversizedFile) return { ok: false, message: `${oversizedFile.name} is larger than the 25 MB limit.` };
+
+    const media = await uploadMedia(
+      await Promise.all(files.map(async (file) => ({
       filename: file.name,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes
-    })),
+      mimeType: file.type,
+      sizeBytes: file.size,
+      data: await file.arrayBuffer()
+    }))),
     {
       actor: session,
       project,
@@ -54,27 +46,27 @@ export async function createUpdateAction(payload: {
     }
   );
 
-  await createUpdate({
-    projectId: payload.projectId,
-    projectName: payload.projectName,
-    vendorId: payload.vendorId,
-    vendorName: payload.vendorName,
+    await createUpdate({
+    projectId,
+    projectName: project.name,
+    vendorId,
+    vendorName: vendor.name,
     submittedByUserId: session.id,
-    happenedAt: payload.happenedAt,
-    description: payload.description,
-    beneficiariesCount: payload.beneficiariesCount,
-    beneficiaryType: payload.beneficiaryType,
-    progressPercent: payload.progressPercent,
-    workDuration: payload.workDuration,
-    whyItMatters: payload.whyItMatters,
-    highlightMoment: payload.highlightMoment,
-    quote: payload.quote,
-    challenges: payload.challenges,
-    nextSteps: payload.nextSteps,
-    socialMediaWorthy: payload.socialMediaWorthy,
-    urgent: payload.urgent,
-    documentationOnly: payload.documentationOnly,
-    sensitiveContent: payload.sensitiveContent,
+    happenedAt: String(formData.get("happenedAt") ?? new Date().toISOString().slice(0, 10)),
+    description,
+    beneficiariesCount: formData.get("beneficiariesCount") ? Number(formData.get("beneficiariesCount")) : undefined,
+    beneficiaryType: String(formData.get("beneficiaryType") ?? ""),
+    progressPercent,
+    workDuration: String(formData.get("workDuration") ?? ""),
+    whyItMatters: String(formData.get("whyItMatters") ?? ""),
+    highlightMoment: String(formData.get("highlightMoment") ?? ""),
+    quote: String(formData.get("quote") ?? ""),
+    challenges: String(formData.get("challenges") ?? ""),
+    nextSteps: String(formData.get("nextSteps") ?? ""),
+    socialMediaWorthy: formData.get("socialMediaWorthy") === "true",
+    urgent: formData.get("urgent") === "true",
+    documentationOnly: formData.get("documentationOnly") === "true",
+    sensitiveContent: formData.get("sensitiveContent") === "true",
     media
   });
 
@@ -82,6 +74,11 @@ export async function createUpdateAction(payload: {
   revalidatePath("/dashboard");
   revalidatePath("/analytics");
   revalidatePath("/media");
+    return { ok: true, message: "Update submitted successfully." };
+  } catch (error) {
+    console.error("Update submission failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "The update could not be submitted. Please try again." };
+  }
 }
 
 export async function approvalAction(formData: FormData) {

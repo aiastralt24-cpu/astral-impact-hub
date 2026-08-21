@@ -46,14 +46,19 @@ export async function createProjectAction(formData: FormData) {
 
 export async function updateProjectAction(formData: FormData) {
   const session = await requireSession();
-  if (!session.isSuperAdmin && session.role !== "admin") {
+  const projectId = String(formData.get("projectId") ?? "");
+  const canEdit =
+    session.isSuperAdmin ||
+    session.role === "admin" ||
+    (session.role === "project_manager" && session.assignedProjectIds.includes(projectId));
+  if (!canEdit) {
     return;
   }
 
   const vendorIds = formData.getAll("vendorIds").map(String);
 
   await updateProject({
-    projectId: String(formData.get("projectId") ?? ""),
+    projectId,
     name: String(formData.get("name") ?? ""),
     category: String(formData.get("category") ?? ""),
     subCategory: String(formData.get("subCategory") ?? ""),

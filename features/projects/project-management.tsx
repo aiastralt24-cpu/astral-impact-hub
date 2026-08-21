@@ -11,7 +11,12 @@ type ProjectManagementProps = {
 };
 
 export function ProjectManagement({ projects, vendors, managers, session }: ProjectManagementProps) {
-  const canManageProjects = Boolean(session.isSuperAdmin || session.role === "admin");
+  const canEditProject = (project: ProjectRecord) =>
+    Boolean(
+      session.isSuperAdmin ||
+        session.role === "admin" ||
+        (session.role === "project_manager" && session.assignedProjectIds.includes(project.id))
+    );
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
@@ -42,7 +47,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
               </div>
             </div>
 
-            {canManageProjects ? (
+            {canEditProject(project) ? (
               <details className="mt-4 rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
                 <summary className="cursor-pointer text-sm font-medium text-[var(--foreground)]">Edit project</summary>
                 <form action={updateProjectAction} className="mt-4 grid gap-4">

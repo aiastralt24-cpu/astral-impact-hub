@@ -17,6 +17,13 @@ export default async function DashboardPage() {
   const publishedThisWeek = data.distributionLog.filter(
     (entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   );
+  const themes = Object.entries(
+    data.projects.reduce<Record<string, typeof data.projects>>((groups, project) => {
+      const theme = project.category.trim() || "Uncategorized";
+      groups[theme] = [...(groups[theme] ?? []), project];
+      return groups;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b));
 
   const actionModules = [
     {
@@ -115,6 +122,28 @@ export default async function DashboardPage() {
             </div>
           );
         })}
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="eyebrow">Themes</p>
+          <h2 className="font-display mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--foreground)]">Projects by theme</h2>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {themes.map(([theme, projects]) => {
+            const averageHealth = Math.round(projects.reduce((sum, project) => sum + project.healthScore, 0) / projects.length);
+            return (
+              <div key={theme} className="glass-card rounded-[28px] p-5">
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--accent-blue)]">Theme</p>
+                <h3 className="font-display mt-2 text-2xl font-black text-[var(--foreground)]">{theme}</h3>
+                <div className="mt-4 flex items-center justify-between text-sm text-[var(--gray-mid)]">
+                  <span>{projects.length} project{projects.length === 1 ? "" : "s"}</span>
+                  <span>Avg. health {averageHealth}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <ProjectGrid projects={data.projects} />
