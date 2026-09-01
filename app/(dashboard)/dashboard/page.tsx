@@ -41,7 +41,7 @@ export default async function DashboardPage() {
       value: `${revisionRequests.length}`,
       detail:
         revisionRequests.length > 0
-          ? `${revisionRequests.length} vendor response${revisionRequests.length === 1 ? "" : "s"} needed`
+          ? `${revisionRequests.length} partner response${revisionRequests.length === 1 ? "" : "s"} needed`
           : "No revision loops open right now",
       tone: "neutral" as const,
       icon: AlertTriangle

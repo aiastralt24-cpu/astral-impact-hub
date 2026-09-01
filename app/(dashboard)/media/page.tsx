@@ -40,7 +40,7 @@ export default async function MediaPage() {
             ? "All project media across the workspace."
             : session.role === "vendor"
               ? "Media from your assigned project work only."
-              : "Media from your assigned vendors and projects only."}
+              : "Media from your assigned partners and projects only."}
         </p>
       </div>
 

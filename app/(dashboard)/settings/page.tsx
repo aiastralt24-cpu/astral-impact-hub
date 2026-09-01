@@ -32,14 +32,14 @@ export default async function SettingsPage() {
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">
             {data.users.filter((user) => user.role !== "vendor").length}
           </p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Employees can work only inside their assigned vendors and projects.</p>
+          <p className="mt-2 text-sm text-[var(--gray-mid)]">Employees can work only inside their assigned partners and projects.</p>
         </div>
         <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Vendor accounts</p>
+          <p className="text-sm font-semibold text-[var(--foreground)]">Partner accounts</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">
             {data.users.filter((user) => user.role === "vendor").length}
           </p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Vendors only see their own project updates, media, and submissions.</p>
+          <p className="mt-2 text-sm text-[var(--gray-mid)]">Partners only see their own project updates, media, and submissions.</p>
         </div>
       </section>
 
@@ -64,7 +64,7 @@ export default async function SettingsPage() {
                   <p className="mt-1 font-medium text-[var(--foreground)]">{user.assignedProjectIds.length || "All assigned through role"}</p>
                 </div>
                 <div className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
-                  <p className="text-[var(--gray-mid)]">Vendors</p>
+                  <p className="text-[var(--gray-mid)]">Partners</p>
                   <p className="mt-1 font-medium text-[var(--foreground)]">{user.assignedVendorIds.length || "None"}</p>
                 </div>
               </div>
@@ -84,7 +84,7 @@ export default async function SettingsPage() {
                       <option value="project_manager">Project manager</option>
                       <option value="content_team">Content team</option>
                       <option value="leadership">Leadership</option>
-                      <option value="vendor">Vendor</option>
+                      <option value="vendor">Partner</option>
                     </select>
                     <div className="rounded-3xl bg-white p-4 ring-1 ring-[var(--border)]">
                       <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned projects</p>
@@ -98,7 +98,7 @@ export default async function SettingsPage() {
                       </div>
                     </div>
                     <div className="rounded-3xl bg-white p-4 ring-1 ring-[var(--border)]">
-                      <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned vendors</p>
+                      <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned partners</p>
                       <div className="grid gap-2 text-sm text-[var(--gray-mid)]">
                         {data.vendors.map((vendor) => (
                           <label key={vendor.id} className="flex items-center gap-3">
@@ -140,7 +140,7 @@ export default async function SettingsPage() {
           <div className="mt-4 grid gap-4">
             <select name="accountType" className="h-12 rounded-2xl px-4">
               <option value="employee">This is an employee</option>
-              <option value="vendor">This is a vendor</option>
+              <option value="vendor">This is a partner</option>
             </select>
             <input name="fullName" placeholder="Full name" className="h-12 rounded-2xl px-4" />
             <input name="email" placeholder="Email" className="h-12 rounded-2xl px-4" />
@@ -154,7 +154,7 @@ export default async function SettingsPage() {
               <option value="leadership">Leadership</option>
             </select>
             <select name="vendorId" className="h-12 rounded-2xl px-4">
-              <option value="">Link vendor account later</option>
+              <option value="">Link partner account later</option>
               {data.vendors.map((vendor) => (
                 <option key={vendor.id} value={vendor.id}>
                   {vendor.name}
@@ -173,7 +173,7 @@ export default async function SettingsPage() {
               </div>
             </div>
             <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)]">
-              <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assign vendors</p>
+              <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assign partners</p>
               <div className="grid gap-2 text-sm text-[var(--gray-mid)]">
                 {data.vendors.map((vendor) => (
                   <label key={vendor.id} className="flex items-center gap-3">

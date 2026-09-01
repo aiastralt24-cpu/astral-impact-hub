@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type { ProjectRecord, VendorRecord } from "@/types/domain";
 
 const steps = [
-  { label: "Project", title: "Choose the project", description: "Start with the right project and vendor context.", icon: Telescope },
+  { label: "Project", title: "Choose the project", description: "Start with the right project and partner context.", icon: Telescope },
   { label: "What happened", title: "Describe the work", description: "Capture the field activity in plain language.", icon: ClipboardList },
   { label: "Impact data", title: "Add the numbers", description: "Record progress and the people or outcomes reached.", icon: Target },
   { label: "Story layer", title: "Shape the story", description: "Add the human details that make the update usable later.", icon: MessagesSquare },
@@ -144,7 +144,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
 
   const reviewItems = [
     { label: "Project", value: selectedProject?.name ?? "No project selected" },
-    { label: "Vendor", value: selectedVendor?.name ?? "No vendor selected" },
+    { label: "Partner", value: selectedVendor?.name ?? "No partner selected" },
     { label: "Progress", value: `${progressPercent}% complete` },
     { label: "Media", value: `${mediaFiles.length} file${mediaFiles.length === 1 ? "" : "s"}` },
     { label: "Beneficiaries", value: beneficiariesCount ? `${beneficiariesCount} ${beneficiaryType}` : "Not added yet" },
@@ -152,7 +152,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
   ];
 
   const projectSummary = [
-    { label: "Vendor", value: selectedVendor?.name ?? "Assigned automatically" },
+    { label: "Partner", value: selectedVendor?.name ?? "Assigned automatically" },
     { label: "Location", value: selectedProject?.location ?? "Will be added from project record" },
     { label: "Reporting", value: selectedProject?.reportingFrequency ?? "Not set" }
   ];
@@ -259,7 +259,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
               <div className="rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
                 <p className="text-sm font-medium text-[var(--foreground)]">What happens next</p>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">
-                  Once you continue, the selected project, vendor, and project rules carry through the rest of the submission.
+                  Once you continue, the selected project, partner, and project rules carry through the rest of the submission.
                 </p>
               </div>
             </div>
@@ -384,7 +384,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
                     <p className="font-display text-[30px] font-black leading-[1.02] tracking-[-0.05em] text-[var(--foreground)]">
                       {selectedProject?.name}
                     </p>
-                    <p className="text-sm text-[var(--gray-mid)]">{selectedVendor?.name ?? "No vendor assigned"}</p>
+                    <p className="text-sm text-[var(--gray-mid)]">{selectedVendor?.name ?? "No partner assigned"}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {reviewItems.slice(2).map((item) => (
@@ -423,7 +423,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
               <p className="text-xs uppercase tracking-[0.22em] text-[var(--gray-mid)]">Current context</p>
               <div className="mt-3 rounded-[24px] border border-[var(--border)] bg-white p-4">
                 <p className="font-medium text-[var(--foreground)]">{selectedProject?.name ?? "No project selected"}</p>
-                <p className="mt-1 text-sm text-[var(--gray-mid)]">{selectedVendor?.name ?? "Vendor will be assigned automatically"}</p>
+                <p className="mt-1 text-sm text-[var(--gray-mid)]">{selectedVendor?.name ?? "Partner will be assigned automatically"}</p>
               </div>
             </div>
 
@@ -487,7 +487,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
               disabled={isSubmitting}
               onClick={() => {
                 if (!selectedProject || !selectedVendor) {
-                  setStatus("This project needs an assigned vendor before an update can be submitted.");
+                  setStatus("This project needs an assigned partner before an update can be submitted.");
                   return;
                 }
                 if (!window.confirm("Do you want to submit this update now?")) return;

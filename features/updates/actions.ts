@@ -16,7 +16,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     const vendorId = String(formData.get("vendorId") ?? "");
     const description = String(formData.get("description") ?? "").trim();
     const progressPercent = Number(formData.get("progressPercent") ?? 0);
-    if (!projectId || !vendorId) return { ok: false, message: "Select a valid project and vendor." };
+    if (!projectId || !vendorId) return { ok: false, message: "Select a valid project and partner." };
     if (description.length < 21) return { ok: false, message: "Describe the activity in at least 21 characters." };
     if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) {
       return { ok: false, message: "Progress must be between 0 and 100." };
@@ -25,7 +25,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     const scopedData = await getDashboardData(session);
     const project = scopedData.projects.find((entry) => entry.id === projectId);
     const vendor = scopedData.vendors.find((entry) => entry.id === vendorId && entry.assignedProjectIds.includes(projectId));
-    if (!project || !vendor) return { ok: false, message: "This project or vendor is no longer available to your account." };
+    if (!project || !vendor) return { ok: false, message: "This project or partner is no longer available to your account." };
     const files = formData.getAll("mediaFiles").filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const invalidFile = files.find((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"));
     if (invalidFile) return { ok: false, message: `${invalidFile.name} is not a supported image or video.` };

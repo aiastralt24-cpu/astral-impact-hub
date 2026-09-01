@@ -38,7 +38,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
                 <p className="mt-1 font-medium text-[var(--foreground)]">{project.location}</p>
               </div>
               <div className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
-                <p className="text-[var(--gray-mid)]">Assigned vendors</p>
+                <p className="text-[var(--gray-mid)]">Assigned partners</p>
                 <p className="mt-1 font-medium text-[var(--foreground)]">{project.vendorName}</p>
               </div>
               <div className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
@@ -82,7 +82,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
                     ))}
                   </select>
                   <div className="rounded-3xl bg-white p-4 ring-1 ring-[var(--border)]">
-                    <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned vendors</p>
+                    <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned partners</p>
                     <div className="grid gap-2 text-sm">
                       {vendors.map((vendor) => (
                         <label key={vendor.id} className="flex items-center gap-3 text-[var(--gray-mid)]">
@@ -168,7 +168,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
             ))}
           </select>
           <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)]">
-            <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assign vendors</p>
+            <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assign partners</p>
             <div className="grid gap-2 text-sm">
               {vendors.map((vendor) => (
                 <label key={vendor.id} className="flex items-center gap-3 text-[var(--gray-mid)]">

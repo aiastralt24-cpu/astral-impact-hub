@@ -47,7 +47,7 @@ export function AnalyticsOverview({ metrics, projects, vendors, updates, distrib
           <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Leadership summary</p>
           <div className="mt-4 space-y-3 text-sm">
             <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Active projects: {activeProjects}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Vendor avg score: {averageVendorScore}</div>
+            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Partner avg score: {averageVendorScore}</div>
             <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Average readiness: {averageReadiness}</div>
             <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Channel deliveries: {distributionLog.length}</div>
           </div>
