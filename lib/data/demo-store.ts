@@ -8,6 +8,7 @@ import { AnthropicContentProvider } from "@/lib/ai/provider";
 import { hasSupabaseBackend } from "@/lib/env";
 import * as liveStore from "@/lib/data/live-store";
 import { computeProjectHealth, computeReadinessScore, computeVendorScore } from "@/lib/domain/scoring";
+import { getWorkspaceScope } from "@/lib/auth/scope";
 import type {
   AppUser,
   ApprovalComment,
@@ -407,7 +408,7 @@ export async function updateProject(input: {
 
   const existing = db.projects[index];
   const vendors = db.vendors.filter((vendor) => input.vendorIds.includes(vendor.id));
-  const vendorName = vendors.map((vendor) => vendor.name).join(", ") || "Unassigned vendor";
+  const vendorName = vendors.map((vendor) => vendor.name).join(", ") || "CSR Associate not assigned";
   const location = `${input.district}, ${input.state}`;
 
   db.projects[index] = {
@@ -543,6 +544,22 @@ export async function createWorkspaceUser(input: {
   return user;
 }
 
+export async function assignPartnerToUser(userId: string, partnerId: string) {
+  if (hasSupabaseBackend) {
+    return liveStore.assignPartnerToUser(userId, partnerId);
+  }
+
+  const db = getDb();
+  const user = db.users.find((entry) => entry.id === userId);
+  if (!user || user.assignedVendorIds.includes(partnerId)) {
+    return Boolean(user);
+  }
+
+  user.assignedVendorIds.push(partnerId);
+  saveDb(db);
+  return true;
+}
+
 export async function updateWorkspaceUser(input: {
   userId: string;
   fullName: string;
@@ -656,7 +673,7 @@ export async function deleteVendor(vendorId: string) {
       ? {
           ...project,
           vendorIds: project.vendorIds.filter((id) => id !== vendorId),
-          vendorName: project.vendorIds.length === 1 ? "Unassigned vendor" : project.vendorName
+          vendorName: project.vendorIds.length === 1 ? "CSR Associate not assigned" : project.vendorName
         }
       : project
   );
@@ -866,7 +883,7 @@ export async function distributeContent(request: DistributionRequestRecord) {
     contentId: request.contentId,
     channel: request.channel,
     status: "sent",
-    message: `${request.channel} delivery ${request.channel === "telegram" ? "queued" : "simulated"} successfully`,
+    message: `${request.channel} sharing ${request.channel === "telegram" ? "queued" : "prepared"} successfully`,
     createdAt: new Date().toISOString()
   };
 
@@ -889,7 +906,7 @@ export async function getDashboardData(session?: AppUser): Promise<DashboardData
 
   const metrics: MetricTile[] = [
     {
-      label: "On-time vendor updates",
+      label: "On-time CSR Associate updates",
       value: `${Math.round((visible.updates.filter((update) => update.status !== "rejected").length / Math.max(visible.updates.length, 1)) * 100)}%`,
       trend: `${visible.updates.length} tracked updates`,
       tone: "positive"
@@ -901,13 +918,13 @@ export async function getDashboardData(session?: AppUser): Promise<DashboardData
       tone: "warning"
     },
     {
-      label: "Generated content packages",
+      label: "Prepared communication content",
       value: `${visible.generatedContent.length}`,
       trend: `${visible.generatedContent.filter((entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week`,
       tone: "positive"
     },
     {
-      label: "Published deliveries",
+      label: "Content shared",
       value: `${visible.distributionLog.length}`,
       trend: `${visible.distributionLog.filter((entry) => entry.channel === "telegram").length} Telegram sends`,
       tone: "neutral"
@@ -973,28 +990,20 @@ function filterDataForUser(db: DemoDatabase, session?: AppUser) {
     };
   }
 
-  const visibleProjectIds = new Set(session.assignedProjectIds);
-  const visibleVendorIds = new Set(session.assignedVendorIds);
-
-  if (session.role === "vendor") {
-    db.projects
-      .filter((project) => project.vendorIds.some((vendorId) => visibleVendorIds.has(vendorId)))
-      .forEach((project) => visibleProjectIds.add(project.id));
-  } else {
-    db.projects
-      .filter((project) => project.internalOwnerId === session.id)
-      .forEach((project) => visibleProjectIds.add(project.id));
-  }
-
-  db.projects
-    .filter((project) => visibleProjectIds.has(project.id))
-    .flatMap((project) => project.vendorIds)
-    .forEach((vendorId) => visibleVendorIds.add(vendorId));
-
-  const projects = db.projects.filter((project) => visibleProjectIds.has(project.id));
+  const { projectIds: visibleProjectIds, partnerIds: visibleVendorIds } = getWorkspaceScope(session, db.projects);
   const vendors = db.vendors.filter((vendor) => visibleVendorIds.has(vendor.id));
+  const projects = db.projects
+    .filter((project) => visibleProjectIds.has(project.id))
+    .map((project) => {
+      const partnerIds = project.vendorIds.filter((vendorId) => visibleVendorIds.has(vendorId));
+      return {
+        ...project,
+        vendorIds: partnerIds,
+        vendorName: vendors.filter((vendor) => partnerIds.includes(vendor.id)).map((vendor) => vendor.name).join(", ") || "No CSR Associate assigned"
+      };
+    });
   const updates = db.updates.filter(
-    (update) => visibleProjectIds.has(update.projectId) || visibleVendorIds.has(update.vendorId) || update.submittedByUserId === session.id
+    (update) => visibleProjectIds.has(update.projectId) && visibleVendorIds.has(update.vendorId)
   );
   const updateIds = new Set(updates.map((update) => update.id));
   const approvals = db.approvals.filter((approval) => updateIds.has(approval.updateId));

@@ -28,12 +28,12 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "project_manager", "vendor", "content_team", "leadership"] },
-  { href: "/projects", label: "Projects", icon: FolderOpen, roles: ["admin", "project_manager"] },
+  { href: "/projects", label: "Projects", icon: FolderOpen, roles: ["admin", "project_manager", "vendor"] },
   { href: "/updates", label: "Updates", icon: FileText, roles: ["admin", "project_manager", "content_team", "vendor"] },
-  { href: "/vendors", label: "Partners", icon: Users, roles: ["admin", "project_manager", "content_team", "leadership"] },
+  { href: "/vendors", label: "CSR Associates", icon: Users, roles: ["admin", "project_manager", "content_team", "vendor", "leadership"] },
   { href: "/media", label: "Media", icon: ImageIcon, roles: ["admin", "project_manager", "content_team", "vendor", "leadership"] },
-  { href: "/content", label: "Content", icon: Sparkles, roles: ["admin", "content_team"] },
-  { href: "/distribution", label: "Distribution", icon: Send, roles: ["admin", "content_team"] },
-  { href: "/analytics", label: "Analytics", icon: BarChart3, roles: ["admin", "leadership"] },
+  { href: "/content", label: "Stories & Messages", icon: Sparkles, roles: ["admin", "content_team"] },
+  { href: "/distribution", label: "Share Content", icon: Send, roles: ["admin", "content_team"] },
+  { href: "/analytics", label: "Reports & Insights", icon: BarChart3, roles: ["admin", "leadership"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }
 ];

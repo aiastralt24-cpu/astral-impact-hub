@@ -12,7 +12,7 @@ export default async function VendorsPage() {
   const data = await getDashboardData(session);
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-3xl font-black">Partner Intelligence</h1>
+      <h1 className="font-display text-3xl font-black">CSR Associates</h1>
       <VendorManagement vendors={data.vendors} session={session} />
     </div>
   );

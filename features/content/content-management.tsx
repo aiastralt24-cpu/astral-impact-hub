@@ -21,7 +21,7 @@ export function ContentManagement({ updates, generatedContent }: ContentManageme
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <Badge variant="approved">{update.status}</Badge>
-                  <Badge variant={content ? "review" : "pending"}>{content ? "Generated" : "Pending generation"}</Badge>
+                  <Badge variant={content ? "review" : "pending"}>{content ? "Content prepared" : "Content not created"}</Badge>
                 </div>
                 <h3 className="font-display text-2xl font-black text-[var(--foreground)]">{update.projectName}</h3>
                 <p className="mt-2 text-sm text-[var(--gray-mid)]">{update.description}</p>
@@ -30,7 +30,7 @@ export function ContentManagement({ updates, generatedContent }: ContentManageme
                 <form action={generateContentAction}>
                   <input type="hidden" name="updateId" value={update.id} />
                   <button className="rounded-full border border-[var(--primary)]/35 bg-[var(--primary)]/18 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--primary)]/24">
-                    Generate package
+                    Create communication content
                   </button>
                 </form>
               ) : null}
@@ -38,7 +38,7 @@ export function ContentManagement({ updates, generatedContent }: ContentManageme
             {content ? (
               <div className="mt-5 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-3xl border border-[var(--border)] bg-[#f8f9fc] p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-blue)]">Emotional hook</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-blue)]">Opening message</p>
                   <p className="mt-3 text-lg text-[var(--foreground)]">{content.emotionalHook}</p>
                   <p className="mt-4 text-sm text-[var(--gray-mid)]">{content.instagramCaptionLong}</p>
                 </div>

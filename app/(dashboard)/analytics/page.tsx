@@ -12,7 +12,7 @@ export default async function AnalyticsPage() {
   const data = await getDashboardData(session);
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-3xl font-black">Analytics</h1>
+      <h1 className="font-display text-3xl font-black">Reports and insights</h1>
       <AnalyticsOverview
         metrics={data.metrics}
         projects={data.projects}

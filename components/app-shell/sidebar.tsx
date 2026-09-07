@@ -17,7 +17,7 @@ function getProfileLines(session: AppUser) {
 
   return {
     title: session.fullName,
-    subtitle: session.role === "vendor" ? "Partner" : "Employee"
+    subtitle: session.role === "vendor" ? "CSR Associate" : "Employee"
   };
 }
 

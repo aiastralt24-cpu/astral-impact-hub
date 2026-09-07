@@ -27,7 +27,7 @@ export function AnalyticsOverview({ metrics, projects, vendors, updates, distrib
 
       <section className="grid gap-6 xl:grid-cols-3">
         <div className="glass-card rounded-[28px] p-6 xl:col-span-2">
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Operational status</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Update status</p>
           <div className="mt-4 space-y-3">
             {updates.map((update) => (
               <div key={update.id} className="flex items-center justify-between rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
@@ -36,7 +36,7 @@ export function AnalyticsOverview({ metrics, projects, vendors, updates, distrib
                   <p className="text-[var(--gray-mid)]">{update.vendorName}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-[var(--foreground)]">Readiness {update.readinessScore}</p>
+                  <p className="font-medium text-[var(--foreground)]">Content readiness {update.readinessScore}</p>
                   <p className="text-[var(--gray-mid)]">{update.status}</p>
                 </div>
               </div>
@@ -44,12 +44,12 @@ export function AnalyticsOverview({ metrics, projects, vendors, updates, distrib
           </div>
         </div>
         <div className="glass-card rounded-[28px] p-6">
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Leadership summary</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Management overview</p>
           <div className="mt-4 space-y-3 text-sm">
             <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Active projects: {activeProjects}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Partner avg score: {averageVendorScore}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Average readiness: {averageReadiness}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Channel deliveries: {distributionLog.length}</div>
+            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Average CSR Associate performance: {averageVendorScore}</div>
+            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Average content readiness: {averageReadiness}</div>
+            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Total content shared: {distributionLog.length}</div>
           </div>
         </div>
       </section>

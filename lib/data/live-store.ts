@@ -6,6 +6,7 @@ import { cache } from "react";
 
 import { AnthropicContentProvider } from "@/lib/ai/provider";
 import { computeProjectHealth, computeReadinessScore, computeVendorScore } from "@/lib/domain/scoring";
+import { getWorkspaceScope } from "@/lib/auth/scope";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   AppUser,
@@ -304,7 +305,7 @@ async function fetchDatabase(): Promise<DemoDatabase> {
       healthScore: row.health_score ?? 0,
       readinessScore: row.content_readiness_average ?? 0,
       reportingFrequency: row.reporting_frequency,
-      vendorName: vendorNames.join(", ") || "Unassigned vendor",
+      vendorName: vendorNames.join(", ") || "CSR Associate not assigned",
       vendorIds,
       strategicTags: row.strategic_tags ?? [],
       emotionalTags: row.emotional_tags ?? [],
@@ -327,7 +328,7 @@ async function fetchDatabase(): Promise<DemoDatabase> {
     projectId: row.project_id,
     projectName: projectMap.get(row.project_id)?.name ?? "Unknown project",
     vendorId: row.vendor_id ?? "",
-    vendorName: vendorMap.get(row.vendor_id)?.name ?? "Unknown vendor",
+    vendorName: vendorMap.get(row.vendor_id)?.name ?? "Unknown CSR Associate",
     submittedByUserId: row.submitted_by_user_id ?? "",
     happenedAt: row.happened_at,
     description: row.description,
@@ -371,7 +372,7 @@ async function fetchDatabase(): Promise<DemoDatabase> {
       id: row.id,
       updateId: row.update_id,
       projectName: update?.projectName ?? "Unknown project",
-      vendorName: update?.vendorName ?? "Unknown vendor",
+      vendorName: update?.vendorName ?? "Unknown CSR Associate",
       emotionalHook: row.emotional_hook,
       instagramCaptionShort: row.instagram_caption_short,
       instagramCaptionLong: row.instagram_caption_long,
@@ -452,26 +453,20 @@ function filterDataForUser(db: DemoDatabase, session?: AppUser) {
     };
   }
 
-  const visibleProjectIds = new Set(session.assignedProjectIds);
-  const visibleVendorIds = new Set(session.assignedVendorIds);
-
-  if (session.role === "vendor") {
-    db.projects
-      .filter((project) => project.vendorIds.some((vendorId) => visibleVendorIds.has(vendorId)))
-      .forEach((project) => visibleProjectIds.add(project.id));
-  } else {
-    db.projects.filter((project) => project.internalOwnerId === session.id).forEach((project) => visibleProjectIds.add(project.id));
-  }
-
-  db.projects
-    .filter((project) => visibleProjectIds.has(project.id))
-    .flatMap((project) => project.vendorIds)
-    .forEach((vendorId) => visibleVendorIds.add(vendorId));
-
-  const projects = db.projects.filter((project) => visibleProjectIds.has(project.id));
+  const { projectIds: visibleProjectIds, partnerIds: visibleVendorIds } = getWorkspaceScope(session, db.projects);
   const vendors = db.vendors.filter((vendor) => visibleVendorIds.has(vendor.id));
+  const projects = db.projects
+    .filter((project) => visibleProjectIds.has(project.id))
+    .map((project) => {
+      const partnerIds = project.vendorIds.filter((vendorId) => visibleVendorIds.has(vendorId));
+      return {
+        ...project,
+        vendorIds: partnerIds,
+        vendorName: vendors.filter((vendor) => partnerIds.includes(vendor.id)).map((vendor) => vendor.name).join(", ") || "No CSR Associate assigned"
+      };
+    });
   const updates = db.updates.filter(
-    (update) => visibleProjectIds.has(update.projectId) || visibleVendorIds.has(update.vendorId) || update.submittedByUserId === session.id
+    (update) => visibleProjectIds.has(update.projectId) && visibleVendorIds.has(update.vendorId)
   );
   const updateIds = new Set(updates.map((update) => update.id));
   const approvals = db.approvals.filter((approval) => updateIds.has(approval.updateId));
@@ -696,6 +691,21 @@ export async function createWorkspaceUser(input: {
 
   const refreshed = await fetchDatabase();
   return refreshed.users.find((user) => user.id === data.id) ?? null;
+}
+
+export async function assignPartnerToUser(userId: string, partnerId: string) {
+  const existing = await getUserById(userId);
+  if (!existing || existing.assignedVendorIds.includes(partnerId)) {
+    return Boolean(existing);
+  }
+
+  const supabase = createServiceRoleClient();
+  const { error } = await supabase
+    .from("users")
+    .update({ assigned_vendor_ids: [...existing.assignedVendorIds, partnerId] })
+    .eq("id", userId);
+  if (error) throw error;
+  return true;
 }
 
 export async function updateWorkspaceUser(input: {
@@ -994,7 +1004,7 @@ export async function distributeContent(request: DistributionRequestRecord) {
   if (!generatedContent) return null;
 
   const payload = {
-    message: `${request.channel} delivery ${request.channel === "telegram" ? "queued" : "simulated"} successfully`
+    message: `${request.channel} sharing ${request.channel === "telegram" ? "queued" : "prepared"} successfully`
   };
 
   const { data, error } = await supabase
@@ -1030,7 +1040,7 @@ export async function getDashboardData(session?: AppUser): Promise<DashboardData
   const visible = filterDataForUser(db, session);
   const metrics: MetricTile[] = [
     {
-      label: "On-time vendor updates",
+      label: "On-time CSR Associate updates",
       value: `${Math.round((visible.updates.filter((update) => update.status !== "rejected").length / Math.max(visible.updates.length, 1)) * 100)}%`,
       trend: `${visible.updates.length} tracked updates`,
       tone: "positive"
@@ -1042,13 +1052,13 @@ export async function getDashboardData(session?: AppUser): Promise<DashboardData
       tone: "warning"
     },
     {
-      label: "Generated content packages",
+      label: "Prepared communication content",
       value: `${visible.generatedContent.length}`,
       trend: `${visible.generatedContent.filter((entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week`,
       tone: "positive"
     },
     {
-      label: "Published deliveries",
+      label: "Content shared",
       value: `${visible.distributionLog.length}`,
       trend: `${visible.distributionLog.filter((entry) => entry.channel === "telegram").length} Telegram sends`,
       tone: "neutral"

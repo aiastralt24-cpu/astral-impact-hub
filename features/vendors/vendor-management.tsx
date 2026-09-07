@@ -16,9 +16,9 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
         <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Active partners</p>
+          <p className="text-sm font-semibold text-[var(--foreground)]">Active CSR Associates</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{vendors.length}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Partners available across current projects</p>
+          <p className="mt-2 text-sm text-[var(--gray-mid)]">CSR Associates available across current projects</p>
         </div>
         <div className="glass-card rounded-[28px] p-5">
           <p className="text-sm font-semibold text-[var(--foreground)]">Average score</p>
@@ -28,7 +28,7 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
         <div className="glass-card rounded-[28px] p-5">
           <p className="text-sm font-semibold text-[var(--foreground)]">Needs follow-up</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{vendors.filter((vendor) => vendor.score < 70).length}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Partners that need closer support this cycle</p>
+          <p className="mt-2 text-sm text-[var(--gray-mid)]">CSR Associates that need closer support this cycle</p>
         </div>
       </section>
 
@@ -62,10 +62,10 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
 
             {canManageVendors ? (
               <details className="mt-4 rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
-                <summary className="cursor-pointer text-sm font-medium text-[var(--foreground)]">Edit partner</summary>
+                <summary className="cursor-pointer text-sm font-medium text-[var(--foreground)]">Edit CSR Associate</summary>
                 <form action={updateVendorAction} className="mt-4 grid gap-4">
                   <input type="hidden" name="vendorId" value={vendor.id} />
-                  <input name="name" defaultValue={vendor.name} placeholder="Partner name" className="h-12 rounded-2xl px-4" />
+                  <input name="name" defaultValue={vendor.name} placeholder="CSR Associate name" className="h-12 rounded-2xl px-4" />
                   <input name="primaryContactName" defaultValue={vendor.primaryContactName} placeholder="Primary contact" className="h-12 rounded-2xl px-4" />
                   <input name="email" defaultValue={vendor.email} placeholder="Email" className="h-12 rounded-2xl px-4" />
                   <input name="whatsappPhone" defaultValue={vendor.whatsappPhone} placeholder="WhatsApp phone" className="h-12 rounded-2xl px-4" />
@@ -82,7 +82,7 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
                       pendingLabel="Saving..."
                       className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
                     >
-                      Save partner
+                      Save CSR Associate
                     </ConfirmSubmitButton>
                   </div>
                 </form>
@@ -95,7 +95,7 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
                       pendingLabel="Deleting..."
                       className="rounded-full border border-rose-500/18 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16"
                     >
-                      Delete partner
+                      Delete CSR Associate
                     </ConfirmSubmitButton>
                   </form>
                 ) : null}
@@ -107,9 +107,9 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
 
         {canManageVendors ? (
         <form action={createVendorAction} className="glass-card rounded-[28px] p-6">
-        <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Onboard partner</p>
+        <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Onboard CSR Associate</p>
         <div className="mt-4 grid gap-4">
-          <input name="name" placeholder="Partner name" className="h-12 rounded-2xl px-4" />
+          <input name="name" placeholder="CSR Associate name" className="h-12 rounded-2xl px-4" />
           <input name="primaryContactName" placeholder="Primary contact" className="h-12 rounded-2xl px-4" />
           <input name="email" placeholder="Email" className="h-12 rounded-2xl px-4" />
           <input name="whatsappPhone" placeholder="WhatsApp phone" className="h-12 rounded-2xl px-4" />
@@ -120,20 +120,20 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
             <input name="rateCardInr" type="number" placeholder="Rate card" className="h-12 rounded-2xl px-4" />
           </div>
           <div className="rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
-            <p className="text-sm font-medium text-[var(--foreground)]">Optional partner login</p>
-            <p className="mt-1 text-sm text-[var(--gray-mid)]">Employees can onboard the partner and issue credentials in the same step.</p>
+            <p className="text-sm font-medium text-[var(--foreground)]">Optional CSR Associate login</p>
+            <p className="mt-1 text-sm text-[var(--gray-mid)]">Employees can onboard the CSR Associate and issue credentials in the same step.</p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <input name="username" placeholder="Partner user ID" className="h-12 rounded-2xl px-4" />
-              <input name="password" placeholder="Partner password" className="h-12 rounded-2xl px-4" />
+              <input name="username" placeholder="CSR Associate user ID" className="h-12 rounded-2xl px-4" />
+              <input name="password" placeholder="CSR Associate password" className="h-12 rounded-2xl px-4" />
             </div>
           </div>
           <textarea name="notes" placeholder="Notes" className="min-h-28 rounded-3xl px-4 py-3" />
           <ConfirmSubmitButton
-            confirmMessage="Create this partner?"
+            confirmMessage="Create this CSR Associate?"
             pendingLabel="Creating..."
             className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
           >
-            Create partner
+            Create CSR Associate
           </ConfirmSubmitButton>
         </div>
         </form>

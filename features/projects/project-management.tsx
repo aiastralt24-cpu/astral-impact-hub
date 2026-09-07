@@ -1,6 +1,7 @@
 import { createProjectAction, deleteProjectAction, updateProjectAction } from "@/features/projects/actions";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
+import { canCreateProject, canManageProject } from "@/lib/auth/project-permissions";
 import type { AppUser, ProjectRecord, VendorRecord } from "@/types/domain";
 
 type ProjectManagementProps = {
@@ -11,15 +12,10 @@ type ProjectManagementProps = {
 };
 
 export function ProjectManagement({ projects, vendors, managers, session }: ProjectManagementProps) {
-  const canEditProject = (project: ProjectRecord) =>
-    Boolean(
-      session.isSuperAdmin ||
-        session.role === "admin" ||
-        (session.role === "project_manager" && session.assignedProjectIds.includes(project.id))
-    );
+  const canCreate = canCreateProject(session);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+    <div className={canCreate ? "grid gap-6 xl:grid-cols-[1.4fr_0.9fr]" : "grid gap-6"}>
       <div className="space-y-4">
         {projects.map((project) => (
           <div key={project.id} className="glass-card rounded-[30px] p-5">
@@ -38,7 +34,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
                 <p className="mt-1 font-medium text-[var(--foreground)]">{project.location}</p>
               </div>
               <div className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
-                <p className="text-[var(--gray-mid)]">Assigned partners</p>
+                <p className="text-[var(--gray-mid)]">Assigned CSR Associates</p>
                 <p className="mt-1 font-medium text-[var(--foreground)]">{project.vendorName}</p>
               </div>
               <div className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
@@ -47,15 +43,15 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
               </div>
             </div>
 
-            {canEditProject(project) ? (
+            {canManageProject(session, project.id) ? (
               <details className="mt-4 rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
                 <summary className="cursor-pointer text-sm font-medium text-[var(--foreground)]">Edit project</summary>
                 <form action={updateProjectAction} className="mt-4 grid gap-4">
                   <input type="hidden" name="projectId" value={project.id} />
                   <input name="name" defaultValue={project.name} placeholder="Project name" className="h-12 rounded-2xl px-4" />
                   <div className="grid gap-4 md:grid-cols-2">
-                    <input name="category" defaultValue={project.category} placeholder="Category" className="h-12 rounded-2xl px-4" />
-                    <input name="subCategory" defaultValue={project.subCategory} placeholder="Sub-category" className="h-12 rounded-2xl px-4" />
+                    <input name="category" defaultValue={project.category} placeholder="Project area" className="h-12 rounded-2xl px-4" />
+                    <input name="subCategory" defaultValue={project.subCategory} placeholder="Focus area" className="h-12 rounded-2xl px-4" />
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <input name="state" defaultValue={project.state} placeholder="State" className="h-12 rounded-2xl px-4" />
@@ -74,28 +70,35 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
                       <option value="monthly">Monthly</option>
                     </select>
                   </div>
-                  <select name="internalOwnerId" defaultValue={project.internalOwnerId} className="h-12 rounded-2xl px-4">
-                    {managers.map((manager) => (
-                      <option value={manager.id} key={manager.id}>
-                        {manager.fullName}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="rounded-3xl bg-white p-4 ring-1 ring-[var(--border)]">
-                    <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned partners</p>
-                    <div className="grid gap-2 text-sm">
-                      {vendors.map((vendor) => (
-                        <label key={vendor.id} className="flex items-center gap-3 text-[var(--gray-mid)]">
-                          <input type="checkbox" name="vendorIds" value={vendor.id} defaultChecked={project.vendorIds.includes(vendor.id)} />
-                          <span>{vendor.name}</span>
-                        </label>
+                  {session.role === "vendor" ? (
+                    <>
+                      <input type="hidden" name="internalOwnerId" value={project.internalOwnerId} />
+                      {project.vendorIds.filter((id) => session.assignedVendorIds.includes(id)).map((id) => (
+                        <input key={id} type="hidden" name="vendorIds" value={id} />
                       ))}
-                    </div>
-                  </div>
-                  <textarea name="projectBrief" defaultValue={project.projectBrief} placeholder="Project brief" className="min-h-28 rounded-3xl px-4 py-3" />
-                  <input name="strategicTags" defaultValue={project.strategicTags.join(", ")} placeholder="Strategic tags" className="h-12 rounded-2xl px-4" />
-                  <input name="emotionalTags" defaultValue={project.emotionalTags.join(", ")} placeholder="Emotional tags" className="h-12 rounded-2xl px-4" />
-                  <input name="beneficiaryTarget" defaultValue={project.beneficiaryTarget} type="number" placeholder="Beneficiary target" className="h-12 rounded-2xl px-4" />
+                    </>
+                  ) : (
+                    <>
+                      <select name="internalOwnerId" defaultValue={project.internalOwnerId} className="h-12 rounded-2xl px-4">
+                        {managers.map((manager) => <option value={manager.id} key={manager.id}>{manager.fullName}</option>)}
+                      </select>
+                      <div className="rounded-3xl bg-white p-4 ring-1 ring-[var(--border)]">
+                        <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assigned CSR Associates</p>
+                        <div className="grid gap-2 text-sm">
+                          {vendors.map((vendor) => (
+                            <label key={vendor.id} className="flex items-center gap-3 text-[var(--gray-mid)]">
+                              <input type="checkbox" name="vendorIds" value={vendor.id} defaultChecked={project.vendorIds.includes(vendor.id)} />
+                              <span>{vendor.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <textarea name="projectBrief" defaultValue={project.projectBrief} placeholder="Project overview" className="min-h-28 rounded-3xl px-4 py-3" />
+                  <input name="strategicTags" defaultValue={project.strategicTags.join(", ")} placeholder="Project highlights" className="h-12 rounded-2xl px-4" />
+                  <input name="emotionalTags" defaultValue={project.emotionalTags.join(", ")} placeholder="Impact themes" className="h-12 rounded-2xl px-4" />
+                  <input name="beneficiaryTarget" defaultValue={project.beneficiaryTarget} type="number" placeholder="People to be reached" className="h-12 rounded-2xl px-4" />
                   <select name="status" defaultValue={project.status} className="h-12 rounded-2xl px-4">
                     <option value="draft">Draft</option>
                     <option value="active">Active</option>
@@ -104,10 +107,14 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
                     <option value="completed">Completed</option>
                     <option value="archived">Archived</option>
                   </select>
-                  <label className="flex items-center gap-3 text-sm text-[var(--gray-mid)]">
-                    <input type="checkbox" name="requireAdminApproval" defaultChecked={project.requireAdminApproval} />
-                    Require admin approval
-                  </label>
+                  {session.role === "vendor" ? (
+                    project.requireAdminApproval ? <input type="hidden" name="requireAdminApproval" value="on" /> : null
+                  ) : (
+                    <label className="flex items-center gap-3 text-sm text-[var(--gray-mid)]">
+                      <input type="checkbox" name="requireAdminApproval" defaultChecked={project.requireAdminApproval} />
+                      Require admin approval
+                    </label>
+                  )}
                   <div className="flex flex-wrap gap-3">
                     <ConfirmSubmitButton
                       confirmMessage={`Save changes for ${project.name}?`}
@@ -135,13 +142,13 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
         ))}
       </div>
 
-      <form action={createProjectAction} className="glass-card rounded-[30px] p-6">
+      {canCreate ? <form action={createProjectAction} className="glass-card rounded-[30px] p-6">
         <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Create project</p>
         <div className="mt-4 grid gap-4">
           <input name="name" placeholder="Project name" className="h-12 rounded-2xl px-4" />
           <div className="grid gap-4 md:grid-cols-2">
-            <input name="category" placeholder="Category" className="h-12 rounded-2xl px-4" />
-            <input name="subCategory" placeholder="Sub-category" className="h-12 rounded-2xl px-4" />
+            <input name="category" placeholder="Project area" className="h-12 rounded-2xl px-4" />
+            <input name="subCategory" placeholder="Focus area" className="h-12 rounded-2xl px-4" />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <input name="state" placeholder="State" className="h-12 rounded-2xl px-4" />
@@ -168,7 +175,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
             ))}
           </select>
           <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)]">
-            <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assign partners</p>
+            <p className="mb-3 text-sm font-medium text-[var(--foreground)]">Assign CSR Associates</p>
             <div className="grid gap-2 text-sm">
               {vendors.map((vendor) => (
                 <label key={vendor.id} className="flex items-center gap-3 text-[var(--gray-mid)]">
@@ -178,10 +185,10 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
               ))}
             </div>
           </div>
-          <textarea name="projectBrief" placeholder="Project brief" className="min-h-28 rounded-3xl px-4 py-3" />
-          <input name="strategicTags" placeholder="Strategic tags" className="h-12 rounded-2xl px-4" />
-          <input name="emotionalTags" placeholder="Emotional tags" className="h-12 rounded-2xl px-4" />
-          <input name="beneficiaryTarget" type="number" placeholder="Beneficiary target" className="h-12 rounded-2xl px-4" />
+          <textarea name="projectBrief" placeholder="Project overview" className="min-h-28 rounded-3xl px-4 py-3" />
+          <input name="strategicTags" placeholder="Project highlights" className="h-12 rounded-2xl px-4" />
+          <input name="emotionalTags" placeholder="Impact themes" className="h-12 rounded-2xl px-4" />
+          <input name="beneficiaryTarget" type="number" placeholder="People to be reached" className="h-12 rounded-2xl px-4" />
           <select name="status" className="h-12 rounded-2xl px-4">
             <option value="draft">Draft</option>
             <option value="active">Active</option>
@@ -199,7 +206,7 @@ export function ProjectManagement({ projects, vendors, managers, session }: Proj
             Create project
           </ConfirmSubmitButton>
         </div>
-      </form>
+      </form> : null}
     </div>
   );
 }

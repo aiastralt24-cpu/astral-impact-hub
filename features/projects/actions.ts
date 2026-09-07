@@ -3,16 +3,18 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
+import { canCreateProject, canManageProject } from "@/lib/auth/project-permissions";
 import { createProject, deleteProject, updateProject } from "@/lib/data/demo-store";
 import type { ProjectRecord } from "@/types/domain";
 
 export async function createProjectAction(formData: FormData) {
   const session = await requireSession();
-  if (session.role !== "admin" && session.role !== "project_manager") {
+  if (!canCreateProject(session)) {
     return;
   }
 
-  const vendorIds = formData.getAll("vendorIds").map(String);
+  const requestedVendorIds = formData.getAll("vendorIds").map(String);
+  const vendorIds = requestedVendorIds;
 
   await createProject({
     name: String(formData.get("name") ?? ""),
@@ -47,15 +49,15 @@ export async function createProjectAction(formData: FormData) {
 export async function updateProjectAction(formData: FormData) {
   const session = await requireSession();
   const projectId = String(formData.get("projectId") ?? "");
-  const canEdit =
-    session.isSuperAdmin ||
-    session.role === "admin" ||
-    (session.role === "project_manager" && session.assignedProjectIds.includes(projectId));
-  if (!canEdit) {
+  if (!canManageProject(session, projectId)) {
     return;
   }
 
-  const vendorIds = formData.getAll("vendorIds").map(String);
+  const requestedVendorIds = formData.getAll("vendorIds").map(String);
+  const vendorIds = session.role === "vendor"
+    ? requestedVendorIds.filter((id) => session.assignedVendorIds.includes(id))
+    : requestedVendorIds;
+  if (session.role === "vendor" && vendorIds.length === 0) return;
 
   await updateProject({
     projectId,
@@ -76,7 +78,7 @@ export async function updateProjectAction(formData: FormData) {
       .map((item) => item.trim())
       .filter(Boolean),
     budgetInr: Number(formData.get("budgetInr") ?? 0),
-    internalOwnerId: String(formData.get("internalOwnerId") ?? ""),
+    internalOwnerId: session.role === "vendor" ? session.id : String(formData.get("internalOwnerId") ?? ""),
     beneficiaryTarget: Number(formData.get("beneficiaryTarget") ?? 0),
     projectBrief: String(formData.get("projectBrief") ?? ""),
     startDate: String(formData.get("startDate") ?? ""),
@@ -92,11 +94,12 @@ export async function updateProjectAction(formData: FormData) {
 
 export async function deleteProjectAction(formData: FormData) {
   const session = await requireSession();
-  if (!session.isSuperAdmin && session.role !== "admin") {
+  const projectId = String(formData.get("projectId") ?? "");
+  if (!canManageProject(session, projectId)) {
     return;
   }
 
-  await deleteProject(String(formData.get("projectId") ?? ""));
+  await deleteProject(projectId);
   revalidatePath("/projects");
   revalidatePath("/dashboard");
   revalidatePath("/media");

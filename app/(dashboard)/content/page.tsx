@@ -12,7 +12,7 @@ export default async function ContentPage() {
   const data = await getDashboardData(session);
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-3xl font-black">Content</h1>
+      <h1 className="font-display text-3xl font-black">Stories and communications</h1>
       <ContentManagement updates={data.updates} generatedContent={data.generatedContent} />
     </div>
   );

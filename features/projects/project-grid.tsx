@@ -28,7 +28,7 @@ export function ProjectGrid({ projects }: { projects: ProjectRecord[] }) {
                 variant={project.readinessScore >= 75 ? "approved" : project.readinessScore < 45 ? "rejected" : "pending"}
                 className="border-white/42 bg-white/82 font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.10)]"
               >
-                Ready {project.readinessScore}
+                Content readiness {project.readinessScore}%
               </Badge>
             </div>
             <div className="relative mt-10">
@@ -41,7 +41,7 @@ export function ProjectGrid({ projects }: { projects: ProjectRecord[] }) {
           </div>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-[var(--gray-mid)]">Health score</span>
+              <span className="text-sm text-[var(--gray-mid)]">Project health</span>
               <span className="font-semibold text-[var(--foreground)]">{project.healthScore}/100</span>
             </div>
             <div className="h-2 rounded-full bg-[#ebeff6]">
@@ -66,7 +66,7 @@ export function ProjectGrid({ projects }: { projects: ProjectRecord[] }) {
               }
             >
               {project.healthScore < 45
-                ? "Needs immediate attention"
+                ? "Action needed"
                 : project.healthScore < 70
                   ? "Needs follow-up this week"
                   : "Healthy and moving"}

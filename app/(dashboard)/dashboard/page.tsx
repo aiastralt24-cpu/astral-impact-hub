@@ -1,153 +1,106 @@
-import { AlertTriangle, CheckCircle2, Clock3, Package2 } from "lucide-react";
+import { AlertTriangle, ClipboardCheck, FolderOpen, Send } from "lucide-react";
+import Link from "next/link";
 
-import { ContentManagement } from "@/features/content/content-management";
-import { getDashboardData } from "@/lib/data/demo-store";
 import { requireSession } from "@/lib/auth/session";
-import { ProjectGrid } from "@/features/projects/project-grid";
+import { getDashboardData } from "@/lib/data/demo-store";
+import type { ProjectRecord } from "@/types/domain";
+
+const statusLabels: Record<ProjectRecord["status"], string> = {
+  active: "Active",
+  at_risk: "Needs attention",
+  draft: "Setup in progress",
+  on_hold: "Paused",
+  completed: "Completed",
+  archived: "Archived"
+};
+
+function ProjectTable({ projects, emptyMessage }: { projects: ProjectRecord[]; emptyMessage: string }) {
+  if (projects.length === 0) {
+    return <p className="px-5 py-8 text-sm text-[var(--gray-mid)]">{emptyMessage}</p>;
+  }
+
+  return (
+    <div className="divide-y divide-[var(--border)]">
+      {projects.map((project) => (
+        <div key={project.id} className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-center">
+          <div className="min-w-0">
+            <p className="truncate font-semibold text-[var(--foreground)]">{project.name}</p>
+            <p className="mt-1 text-sm text-[var(--gray-mid)]">{project.location || "Location not added"}</p>
+          </div>
+          <div className="min-w-0 text-sm">
+            <p className="text-xs text-[var(--gray-mid)] sm:hidden">CSR Associate</p>
+            <p className="truncate text-[var(--foreground)]">{project.vendorName || "CSR Associate not assigned"}</p>
+          </div>
+          <div className="flex items-center justify-between gap-4 sm:justify-end">
+            <span className={`text-sm font-medium ${project.healthScore < 45 || project.status === "at_risk" ? "text-rose-700" : "text-emerald-700"}`}>
+              {project.healthScore < 45 ? "Needs an update" : statusLabels[project.status]}
+            </span>
+            <Link href="/projects" aria-label={`View ${project.name}`} className="shrink-0 text-sm font-semibold text-[var(--primary)] hover:underline">View</Link>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default async function DashboardPage() {
   const session = await requireSession();
   const data = await getDashboardData(session);
-  const highlightedContentUpdates = data.updates.filter((update) => update.status === "approved" || update.status === "published");
-  const pendingReviews = data.updates.filter((update) => update.status === "pending" || update.status === "in_review");
-  const revisionRequests = data.updates.filter((update) => update.status === "revision_requested");
-  const readyToPublish = data.generatedContent.length;
-  const blockedProjects = data.projects.filter((project) => project.healthScore < 45);
-  const atRiskProjects = data.projects.filter((project) => project.healthScore >= 45 && project.healthScore < 70);
-  const publishedThisWeek = data.distributionLog.filter(
-    (entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  );
-  const themes = Object.entries(
-    data.projects.reduce<Record<string, typeof data.projects>>((groups, project) => {
-      const theme = project.category.trim() || "Uncategorized";
-      groups[theme] = [...(groups[theme] ?? []), project];
-      return groups;
-    }, {})
-  ).sort(([a], [b]) => a.localeCompare(b));
+  const updatesToReview = data.updates.filter((update) => ["pending", "in_review", "revision_requested"].includes(update.status)).length;
+  const projectsNeedingAttention = data.projects.filter((project) => project.healthScore < 45 || project.status === "at_risk");
+  const otherProjects = data.projects.filter((project) => project.healthScore >= 45 && project.status !== "at_risk");
 
-  const actionModules = [
-    {
-      title: "Needs review",
-      value: `${pendingReviews.length}`,
-      detail:
-        pendingReviews.length > 0
-          ? `${pendingReviews.length} update${pendingReviews.length === 1 ? "" : "s"} waiting for approval`
-          : "Nothing waiting in the approval queue",
-      tone: "warning" as const,
-      icon: Clock3
-    },
-    {
-      title: "Needs revision",
-      value: `${revisionRequests.length}`,
-      detail:
-        revisionRequests.length > 0
-          ? `${revisionRequests.length} partner response${revisionRequests.length === 1 ? "" : "s"} needed`
-          : "No revision loops open right now",
-      tone: "neutral" as const,
-      icon: AlertTriangle
-    },
-    {
-      title: "Ready to publish",
-      value: `${readyToPublish}`,
-      detail:
-        readyToPublish > 0
-          ? `${readyToPublish} content package${readyToPublish === 1 ? "" : "s"} available`
-          : "No approved content package yet",
-      tone: "positive" as const,
-      icon: Package2
-    },
-    {
-      title: "Project health",
-      value: blockedProjects.length > 0 ? `${blockedProjects.length} blocked` : atRiskProjects.length > 0 ? `${atRiskProjects.length} at risk` : "On track",
-      detail:
-        blockedProjects.length > 0
-          ? "Immediate attention needed on low-health work"
-          : atRiskProjects.length > 0
-            ? "Watch the projects slipping behind"
-            : publishedThisWeek.length > 0
-              ? `${publishedThisWeek.length} delivery${publishedThisWeek.length === 1 ? "" : "ies"} completed this week`
-              : "No critical risk visible across active projects",
-      tone: blockedProjects.length > 0 ? "danger" as const : atRiskProjects.length > 0 ? "warning" as const : "positive" as const,
-      icon: blockedProjects.length > 0 || atRiskProjects.length > 0 ? AlertTriangle : CheckCircle2
-    }
-  ];
+  const summary = [
+    { label: "Projects", value: data.projects.length, icon: FolderOpen, tone: "blue" },
+    { label: "Updates to review", value: updatesToReview, icon: ClipboardCheck, tone: "amber" },
+    { label: "Content ready to share", value: data.generatedContent.length, icon: Send, tone: "green" },
+    { label: "Projects needing attention", value: projectsNeedingAttention.length, icon: AlertTriangle, tone: "rose" }
+  ] as const;
 
   return (
-    <div className="space-y-8">
-      <section className="section-shell glass-panel rounded-[36px] p-6 sm:p-8">
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="eyebrow">Overview</p>
-            <h1 className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)] sm:text-5xl">
-              Today&apos;s working view.
-            </h1>
-            <p className="mt-4 max-w-xl text-[var(--gray-mid)]">
-              Track what needs action, what is blocked, and what is ready to move forward.
-            </p>
-          </div>
-          <div className="grid min-w-full gap-3 sm:grid-cols-3 lg:min-w-[420px]">
-            {data.metrics.slice(0, 3).map((metric) => (
-              <div key={metric.label} className="rounded-[28px] bg-white/76 p-4 ring-1 ring-[var(--border)] backdrop-blur-xl">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--gray-mid)]">{metric.label}</p>
-                <p className="font-display mt-3 text-3xl font-black tracking-[-0.05em] text-[var(--foreground)]">{metric.value}</p>
-                <p className="mt-2 text-sm text-[var(--gray-mid)]">{metric.trend}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+    <div className="space-y-7">
+      <header className="pl-16 lg:pl-0">
+        <h1 className="font-display text-3xl font-black tracking-[-0.04em] text-[var(--foreground)]">Dashboard</h1>
+        <p className="mt-2 text-[var(--gray-mid)]">Here&apos;s what needs your attention today.</p>
+      </header>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {actionModules.map((module) => {
-          const Icon = module.icon;
-          const toneClasses =
-            module.tone === "danger"
-              ? "bg-rose-50 text-rose-700 ring-rose-200"
-              : module.tone === "warning"
-                ? "bg-amber-50 text-amber-700 ring-amber-200"
-                : "bg-emerald-50 text-emerald-700 ring-emerald-200";
-
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Dashboard summary">
+        {summary.map((item) => {
+          const Icon = item.icon;
+          const iconTone = {
+            blue: "bg-blue-50 text-blue-700",
+            amber: "bg-amber-50 text-amber-700",
+            green: "bg-emerald-50 text-emerald-700",
+            rose: "bg-rose-50 text-rose-700"
+          }[item.tone];
           return (
-            <div key={module.title} className="glass-card rounded-[28px] p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold text-[var(--foreground)]">{module.title}</p>
-                  <p className="font-display text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{module.value}</p>
-                </div>
-                <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${toneClasses}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
+            <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-white px-5 py-4">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTone}`}><Icon className="h-5 w-5" /></div>
+              <div>
+                <p className="text-sm text-[var(--gray-mid)]">{item.label}</p>
+                <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{item.value}</p>
               </div>
-              <p className="mt-4 text-sm leading-6 text-[var(--gray-mid)]">{module.detail}</p>
             </div>
           );
         })}
       </section>
 
-      <section className="space-y-4">
-        <div>
-          <p className="eyebrow">Themes</p>
-          <h2 className="font-display mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--foreground)]">Projects by theme</h2>
+      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
+        <div className="border-b border-[var(--border)] px-5 py-4">
+          <h2 className="font-display text-lg font-bold text-[var(--foreground)]">Projects needing attention</h2>
+          <p className="mt-1 text-sm text-[var(--gray-mid)]">Projects that need a new update or team follow-up.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {themes.map(([theme, projects]) => {
-            const averageHealth = Math.round(projects.reduce((sum, project) => sum + project.healthScore, 0) / projects.length);
-            return (
-              <div key={theme} className="glass-card rounded-[28px] p-5">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--accent-blue)]">Theme</p>
-                <h3 className="font-display mt-2 text-2xl font-black text-[var(--foreground)]">{theme}</h3>
-                <div className="mt-4 flex items-center justify-between text-sm text-[var(--gray-mid)]">
-                  <span>{projects.length} project{projects.length === 1 ? "" : "s"}</span>
-                  <span>Avg. health {averageHealth}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <ProjectTable projects={projectsNeedingAttention} emptyMessage="No projects need attention right now." />
       </section>
 
-      <ProjectGrid projects={data.projects} />
-      <ContentManagement updates={highlightedContentUpdates} generatedContent={data.generatedContent} />
+      {otherProjects.length > 0 ? (
+        <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
+          <div className="border-b border-[var(--border)] px-5 py-4">
+            <h2 className="font-display text-lg font-bold text-[var(--foreground)]">All other projects</h2>
+          </div>
+          <ProjectTable projects={otherProjects} emptyMessage="No other projects to show." />
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export default async function DistributionPage() {
   const data = await getDashboardData(session);
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-3xl font-black">Distribution</h1>
+      <h1 className="font-display text-3xl font-black">Share content</h1>
       <DistributionManagement
         updates={data.updates}
         generatedContent={data.generatedContent}

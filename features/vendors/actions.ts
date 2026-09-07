@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
-import { createVendor, createWorkspaceUser, deleteVendor, updateVendor } from "@/lib/data/demo-store";
+import { assignPartnerToUser, createVendor, createWorkspaceUser, deleteVendor, getDashboardData, updateVendor } from "@/lib/data/demo-store";
 
 export async function createVendorAction(formData: FormData) {
   const session = await requireSession();
@@ -25,6 +25,10 @@ export async function createVendorAction(formData: FormData) {
     rateCardInr: Number(formData.get("rateCardInr") ?? 0),
     notes: String(formData.get("notes") ?? "")
   });
+
+  if (vendor && !session.isSuperAdmin && session.role !== "admin") {
+    await assignPartnerToUser(session.id, vendor.id);
+  }
 
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
@@ -54,8 +58,14 @@ export async function updateVendorAction(formData: FormData) {
     return;
   }
 
+  const vendorId = String(formData.get("vendorId") ?? "");
+  const scopedData = await getDashboardData(session);
+  if (!scopedData.vendors.some((vendor) => vendor.id === vendorId)) {
+    return;
+  }
+
   await updateVendor({
-    vendorId: String(formData.get("vendorId") ?? ""),
+    vendorId,
     name: String(formData.get("name") ?? ""),
     primaryContactName: String(formData.get("primaryContactName") ?? ""),
     email: String(formData.get("email") ?? ""),

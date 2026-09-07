@@ -9,9 +9,9 @@ export function canAccessRoute(role: AppRole, path: string) {
     "/analytics": ["admin", "leadership"],
     "/content": ["admin", "content_team"],
     "/distribution": ["admin", "content_team"],
-    "/projects": ["admin", "project_manager"],
+    "/projects": ["admin", "project_manager", "vendor"],
     "/settings": ["admin"],
-    "/vendors": ["admin", "project_manager", "content_team", "leadership"]
+    "/vendors": ["admin", "project_manager", "content_team", "vendor", "leadership"]
   };
 
   const allowed = restrictedRoutes[path];

@@ -24,20 +24,20 @@ export function DistributionManagement({ updates, generatedContent, distribution
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-3">
         <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Ready packages</p>
+          <p className="text-sm font-semibold text-[var(--foreground)]">Content ready to share</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{distributable.length}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Approved content waiting for channel delivery</p>
+          <p className="mt-2 text-sm text-[var(--gray-mid)]">Approved content waiting to be shared</p>
         </div>
         <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Delivered this week</p>
+          <p className="text-sm font-semibold text-[var(--foreground)]">Shared this week</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{sentThisWeek.length}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Completed sends across all active channels</p>
+          <p className="mt-2 text-sm text-[var(--gray-mid)]">Content shared across all active platforms</p>
         </div>
         <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Latest channel</p>
+          <p className="text-sm font-semibold text-[var(--foreground)]">Last shared on</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)] capitalize">{distributionLog[0]?.channel ?? "None"}</p>
           <p className="mt-2 text-sm text-[var(--gray-mid)]">
-            {distributionLog[0] ? distributionLog[0].message : "No delivery attempts have been made yet"}
+            {distributionLog[0] ? distributionLog[0].message : "No content has been shared yet"}
           </p>
         </div>
       </section>
@@ -69,7 +69,7 @@ export function DistributionManagement({ updates, generatedContent, distribution
                           : "bg-amber-50 text-amber-700 ring-amber-200"
                     }`}
                   >
-                    Send to {channel}
+                    Share on {channel}
                   </button>
                 </form>
               ))}
@@ -78,9 +78,9 @@ export function DistributionManagement({ updates, generatedContent, distribution
         ))}
         </div>
         <div className="glass-card rounded-[28px] p-6">
-        <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Recent delivery log</p>
+        <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Sharing history</p>
         <div className="mt-4 space-y-3">
-          {distributionLog.length === 0 ? <p className="text-sm text-[var(--gray-mid)]">No delivery attempts yet.</p> : null}
+          {distributionLog.length === 0 ? <p className="text-sm text-[var(--gray-mid)]">No sharing activity yet.</p> : null}
           {distributionLog.map((entry) => (
             <div key={entry.id} className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
               <p className="font-medium capitalize text-[var(--foreground)]">{entry.channel}</p>

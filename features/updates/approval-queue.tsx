@@ -24,18 +24,57 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
     session.role === "vendor" ? update.submittedByUserId === session.id : true
   );
 
+  if (session.role === "vendor") {
+    const statusLabels: Record<UpdateRecord["status"], string> = {
+      draft: "Not submitted",
+      pending: "Sent for review",
+      in_review: "Being reviewed",
+      revision_requested: "Changes needed",
+      approved: "Approved",
+      rejected: "Speak with your manager",
+      published: "Shared"
+    };
+
+    return (
+      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
+        <div className="border-b border-[var(--border)] px-5 py-4">
+          <h2 className="font-display text-lg font-bold text-[var(--foreground)]">Previous updates</h2>
+          <p className="mt-1 text-sm text-[var(--gray-mid)]">Check what you submitted and whether changes are needed.</p>
+        </div>
+        {actionable.length > 0 ? (
+          <div className="divide-y divide-[var(--border)]">
+            {actionable.map((update) => (
+              <div key={update.id} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-[var(--foreground)]">{update.projectName}</p>
+                    <p className="mt-1 text-sm text-[var(--gray-mid)]">{update.happenedAt}</p>
+                  </div>
+                  <Badge variant={badgeMap[update.status]}>{statusLabels[update.status]}</Badge>
+                </div>
+                {update.status === "revision_requested" && commentsByUpdate[update.id]?.at(-1) ? (
+                  <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Please update: {commentsByUpdate[update.id].at(-1)?.message}
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="px-5 py-8 text-sm text-[var(--gray-mid)]">You have not submitted an update yet.</p>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="glass-card rounded-[32px] p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Review queue</p>
-          <h2 className="mt-2 font-display text-[26px] font-black tracking-[-0.04em] text-[var(--foreground)]">
-            {session.role === "vendor" ? "Your submitted updates" : "Waiting for attention"}
-          </h2>
+          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Updates awaiting review</p>
+          <h2 className="mt-2 font-display text-[26px] font-black tracking-[-0.04em] text-[var(--foreground)]">Waiting for attention</h2>
           <p className="mt-2 max-w-md text-sm leading-6 text-[var(--gray-mid)]">
-            {session.role === "vendor"
-              ? "Track what is pending, what came back for revision, and what is ready to move forward."
-              : "Review one item at a time, leave a note only when it adds clarity, and keep approvals moving."}
+            Review one item at a time, leave a note only when it adds clarity, and keep approvals moving.
           </p>
         </div>
         <div className="rounded-[22px] border border-[var(--border)] bg-[#f8f9fc] px-4 py-3 text-right">
@@ -52,7 +91,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                 <div className="min-w-0 flex-1">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <Badge variant={badgeMap[update.status]}>{update.status.replaceAll("_", " ")}</Badge>
-                    <Badge variant={update.readinessScore >= 75 ? "approved" : "pending"}>Readiness {update.readinessScore}</Badge>
+                    <Badge variant={update.readinessScore >= 75 ? "approved" : "pending"}>Content readiness {update.readinessScore}</Badge>
                   </div>
                   <h3 className="font-display text-[24px] font-bold tracking-[-0.03em] text-[var(--foreground)]">{update.projectName}</h3>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">{update.description}</p>
@@ -80,7 +119,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
 
               {commentsByUpdate[update.id]?.length ? (
                 <div className="mt-4 rounded-[22px] border border-[var(--border)] bg-white p-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-blue)]">Audit trail</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-blue)]">Review history</p>
                   <div className="space-y-2 text-sm text-[var(--gray-mid)]">
                     {commentsByUpdate[update.id].map((comment) => (
                       <div key={comment.id}>
@@ -91,8 +130,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                 </div>
               ) : null}
 
-              {session.role === "vendor" ? null : (
-                <form action={approvalAction} className="mt-4 space-y-3">
+              <form action={approvalAction} className="mt-4 space-y-3">
                   <input type="hidden" name="updateId" value={update.id} />
                   <input type="hidden" name="stage" value={session.role === "admin" ? "admin" : "manager"} />
                   <input
@@ -118,7 +156,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                       pendingLabel="Sending..."
                       className="rounded-full border border-amber-500/16 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-500/16"
                     >
-                      Request revision
+                      Ask for changes
                     </ConfirmSubmitButton>
                     <ConfirmSubmitButton
                       name="action"
@@ -130,8 +168,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                       Reject
                     </ConfirmSubmitButton>
                   </div>
-                </form>
-              )}
+              </form>
             </article>
           ))
         ) : (
