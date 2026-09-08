@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { LoginSubmitButton } from "@/features/auth/login-submit-button";
 import { getSession } from "@/lib/auth/session";
 import { loginAction } from "./actions";
 
@@ -66,9 +66,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   Invalid user ID or password.
                 </p>
               ) : null}
-              <Button className="h-14 w-full bg-[linear-gradient(135deg,#0047ab,#0059ff)] text-lg shadow-[0_16px_34px_rgba(0,71,171,0.22)] hover:brightness-[1.03]">
-                Continue
-              </Button>
+              <LoginSubmitButton />
             </form>
           </div>
         </section>

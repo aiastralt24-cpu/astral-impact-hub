@@ -644,23 +644,28 @@ export async function deleteProject(projectId: string) {
 
 export async function createVendor(input: Omit<VendorRecord, "id" | "assignedProjectIds" | "score">) {
   const supabase = createServiceRoleClient();
-  const { data, error } = await supabase
+  const vendorData = {
+    name: input.name,
+    primary_contact_name: input.primaryContactName,
+    email: input.email || null,
+    whatsapp_phone: input.whatsappPhone || null,
+    instagram_handle: input.instagramHandle || null,
+    facebook_handle: input.facebookHandle || null,
+    organization_type: input.organizationType || null,
+    geographical_scope: input.geographicalScope,
+    contract_valid_until: input.contractValidUntil || null,
+    rate_card_inr: input.rateCardInr,
+    notes: input.notes || null
+  };
+  let { data, error } = await supabase
     .from("vendors")
-    .insert({
-      name: input.name,
-      primary_contact_name: input.primaryContactName,
-      email: input.email || null,
-      whatsapp_phone: input.whatsappPhone || null,
-      instagram_handle: input.instagramHandle || null,
-      facebook_handle: input.facebookHandle || null,
-      organization_type: input.organizationType || null,
-      geographical_scope: input.geographicalScope,
-      contract_valid_until: input.contractValidUntil || null,
-      rate_card_inr: input.rateCardInr,
-      notes: input.notes || null
-    })
+    .insert(vendorData)
     .select("*")
     .single();
+  if (error?.code === "PGRST204" && /instagram_handle|facebook_handle/.test(error.message)) {
+    const { instagram_handle: _instagram, facebook_handle: _facebook, ...legacyVendorData } = vendorData;
+    ({ data, error } = await supabase.from("vendors").insert(legacyVendorData).select("*").single());
+  }
   if (error) throw error;
 
   const refreshed = await fetchDatabase();
@@ -767,22 +772,27 @@ export async function updateVendor(input: {
   notes: string;
 }) {
   const supabase = createServiceRoleClient();
-  const { error } = await supabase
+  const vendorData = {
+    name: input.name,
+    primary_contact_name: input.primaryContactName,
+    email: input.email || null,
+    whatsapp_phone: input.whatsappPhone || null,
+    instagram_handle: input.instagramHandle || null,
+    facebook_handle: input.facebookHandle || null,
+    organization_type: input.organizationType || null,
+    geographical_scope: input.geographicalScope,
+    contract_valid_until: input.contractValidUntil || null,
+    rate_card_inr: input.rateCardInr,
+    notes: input.notes || null
+  };
+  let { error } = await supabase
     .from("vendors")
-    .update({
-      name: input.name,
-      primary_contact_name: input.primaryContactName,
-      email: input.email || null,
-      whatsapp_phone: input.whatsappPhone || null,
-      instagram_handle: input.instagramHandle || null,
-      facebook_handle: input.facebookHandle || null,
-      organization_type: input.organizationType || null,
-      geographical_scope: input.geographicalScope,
-      contract_valid_until: input.contractValidUntil || null,
-      rate_card_inr: input.rateCardInr,
-      notes: input.notes || null
-    })
+    .update(vendorData)
     .eq("id", input.vendorId);
+  if (error?.code === "PGRST204" && /instagram_handle|facebook_handle/.test(error.message)) {
+    const { instagram_handle: _instagram, facebook_handle: _facebook, ...legacyVendorData } = vendorData;
+    ({ error } = await supabase.from("vendors").update(legacyVendorData).eq("id", input.vendorId));
+  }
   if (error) throw error;
   const refreshed = await fetchDatabase();
   return refreshed.vendors.find((vendor) => vendor.id === input.vendorId) ?? null;
