@@ -71,7 +71,7 @@ export default async function MediaPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium text-[var(--foreground)]">{item.name}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--gray-mid)]">{item.storageProvider.replaceAll("_", " ")}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--gray-mid)]">Stored securely</p>
                       </div>
                       <span className="rounded-full bg-[#f8f9fc] px-3 py-1 text-xs uppercase tracking-[0.18em] text-[var(--gray-mid)] ring-1 ring-[var(--border)]">
                         {item.updateStatus.replaceAll("_", " ")}
@@ -79,7 +79,7 @@ export default async function MediaPage() {
                     </div>
                     <p className="mt-3 text-sm leading-6 text-[var(--gray-mid)]">{item.caption || "Awaiting caption"}</p>
                     <div className="mt-4 flex items-center justify-between text-sm text-[var(--gray-mid)]">
-                      <span>{item.vendorName}</span>
+                      <span>{item.vendorName === "Unknown CSR Associate" || item.vendorName === "Managed internally" ? "Foundation team" : item.vendorName}</span>
                       <span>{item.updateDate}</span>
                     </div>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
