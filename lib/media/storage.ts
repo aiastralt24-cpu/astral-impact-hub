@@ -15,7 +15,7 @@ type MediaUploadInput = {
 type MediaUploadContext = {
   actor: AppUser;
   project: ProjectRecord;
-  vendor: VendorRecord;
+  vendor?: VendorRecord;
 };
 
 type MediaAccessContext = {
@@ -26,10 +26,20 @@ type MediaStorageService = {
   uploadMedia(files: MediaUploadInput[], context: MediaUploadContext): Promise<UpdateMediaRecord[]>;
   deleteMedia(media: UpdateMediaRecord, context: MediaAccessContext): Promise<boolean>;
   getMediaAccessUrl(media: UpdateMediaRecord, context: MediaAccessContext): Promise<string>;
-  resolveProjectFolder(project: ProjectRecord, vendor: VendorRecord): Promise<string>;
+  resolveProjectFolder(project: ProjectRecord, vendor?: VendorRecord): Promise<string>;
 };
 
 const SUPABASE_MEDIA_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_MEDIA_BUCKET?.trim() || "project-media";
+
+function mediaStoragePath(media: UpdateMediaRecord) {
+  const publicMarker = `/storage/v1/object/public/${SUPABASE_MEDIA_BUCKET}/`;
+  const signedMarker = `/storage/v1/object/sign/${SUPABASE_MEDIA_BUCKET}/`;
+  if (media.externalUrl.includes(publicMarker)) return decodeURIComponent(media.externalUrl.split(publicMarker)[1].split("?")[0]);
+  if (media.externalUrl.includes(signedMarker)) return decodeURIComponent(media.externalUrl.split(signedMarker)[1].split("?")[0]);
+  if (media.externalUrl.startsWith(`supabase://${SUPABASE_MEDIA_BUCKET}/`)) return media.externalUrl.slice(`supabase://${SUPABASE_MEDIA_BUCKET}/`.length);
+  const folder = media.externalFolderId.replace(new RegExp(`^${SUPABASE_MEDIA_BUCKET}/?`), "");
+  return `${folder}/${media.externalFileId}-${sanitizeFilename(media.name)}`;
+}
 
 function sanitizeFolderName(value: string) {
   return value
@@ -69,9 +79,9 @@ function inferMimeType(filename: string) {
 class DemoSupabaseStorageService implements MediaStorageService {
   readonly provider: MediaStorageProvider = "supabase";
 
-  async resolveProjectFolder(project: ProjectRecord, vendor: VendorRecord) {
+  async resolveProjectFolder(project: ProjectRecord, vendor?: VendorRecord) {
     const projectSegment = sanitizeFolderName(project.name);
-    const vendorSegment = sanitizeFolderName(vendor.name);
+    const vendorSegment = sanitizeFolderName(vendor?.name ?? "managed-internally");
     return `projects/${projectSegment}/${vendorSegment}`;
   }
 
@@ -111,12 +121,20 @@ class DemoSupabaseStorageService implements MediaStorageService {
     }));
   }
 
-  async deleteMedia(_media: UpdateMediaRecord, _context: MediaAccessContext) {
+  async deleteMedia(media: UpdateMediaRecord, _context: MediaAccessContext) {
+    if (!hasSupabaseBackend) return true;
+    const { error } = await createServiceRoleClient().storage.from(SUPABASE_MEDIA_BUCKET).remove([mediaStoragePath(media)]);
+    if (error) throw new Error(`Could not delete ${media.name}: ${error.message}`);
     return true;
   }
 
   async getMediaAccessUrl(media: UpdateMediaRecord, _context: MediaAccessContext) {
-    return media.externalUrl;
+    if (!hasSupabaseBackend) return "";
+    const { data, error } = await createServiceRoleClient().storage
+      .from(SUPABASE_MEDIA_BUCKET)
+      .createSignedUrl(mediaStoragePath(media), 60 * 60);
+    if (error || !data?.signedUrl) return "";
+    return data.signedUrl;
   }
 }
 
@@ -134,6 +152,6 @@ export async function getMediaAccessUrl(media: UpdateMediaRecord, context: Media
   return storageService.getMediaAccessUrl(media, context);
 }
 
-export async function resolveProjectFolder(project: ProjectRecord, vendor: VendorRecord) {
+export async function resolveProjectFolder(project: ProjectRecord, vendor?: VendorRecord) {
   return storageService.resolveProjectFolder(project, vendor);
 }

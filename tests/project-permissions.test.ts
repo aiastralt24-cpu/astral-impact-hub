@@ -26,3 +26,8 @@ test("CSR Associates cannot update or delete an unassigned project", () => {
 test("CSR Associates cannot create projects", () => {
   assert.equal(canCreateProject(csrAssociate), false);
 });
+
+test("Project Managers can manage projects they own", () => {
+  const manager = { ...csrAssociate, id: "manager-1", role: "project_manager" as const, assignedProjectIds: [] };
+  assert.equal(canManageProject(manager, "internal-project", "manager-1"), true);
+});

@@ -32,5 +32,5 @@ export function getWorkspaceScope(session: AppUser, projects: ProjectRecord[]): 
 export function canAccessUpdate(session: AppUser, projects: ProjectRecord[], update: Pick<UpdateRecord, "projectId" | "vendorId">) {
   if (session.isSuperAdmin || session.role === "admin") return true;
   const scope = getWorkspaceScope(session, projects);
-  return scope.projectIds.has(update.projectId) && scope.partnerIds.has(update.vendorId);
+  return scope.projectIds.has(update.projectId) && (!update.vendorId || scope.partnerIds.has(update.vendorId));
 }

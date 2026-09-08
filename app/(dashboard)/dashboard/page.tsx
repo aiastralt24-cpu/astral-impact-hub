@@ -29,13 +29,13 @@ function ProjectTable({ projects, emptyMessage }: { projects: ProjectRecord[]; e
           </div>
           <div className="min-w-0 text-sm">
             <p className="text-xs text-[var(--gray-mid)] sm:hidden">CSR Associate</p>
-            <p className="truncate text-[var(--foreground)]">{project.vendorName || "CSR Associate not assigned"}</p>
+            <p className="truncate text-[var(--foreground)]">{project.vendorName || "Managed internally"}</p>
           </div>
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <span className={`text-sm font-medium ${project.healthScore < 45 || project.status === "at_risk" ? "text-rose-700" : "text-emerald-700"}`}>
               {project.healthScore < 45 ? "Needs an update" : statusLabels[project.status]}
             </span>
-            <Link href="/projects" aria-label={`View ${project.name}`} className="shrink-0 text-sm font-semibold text-[var(--primary)] hover:underline">View</Link>
+            <Link href={`/projects/${project.id}`} aria-label={`View ${project.name}`} className="shrink-0 text-sm font-semibold text-[var(--primary)] hover:underline">View</Link>
           </div>
         </div>
       ))}

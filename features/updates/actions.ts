@@ -16,7 +16,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     const vendorId = String(formData.get("vendorId") ?? "");
     const description = String(formData.get("description") ?? "").trim();
     const progressPercent = Number(formData.get("progressPercent") ?? 0);
-    if (!projectId || !vendorId) return { ok: false, message: "Select a valid project and CSR Associate." };
+    if (!projectId) return { ok: false, message: "Select a valid project." };
     if (!description) return { ok: false, message: "Please describe what happened during the activity." };
     if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) {
       return { ok: false, message: "Progress must be between 0 and 100." };
@@ -25,7 +25,13 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     const scopedData = await getDashboardData(session);
     const project = scopedData.projects.find((entry) => entry.id === projectId);
     const vendor = scopedData.vendors.find((entry) => entry.id === vendorId && project?.vendorIds.includes(entry.id));
-    if (!project || !vendor) return { ok: false, message: "This project or CSR Associate is no longer available to your account." };
+    const isInternallyManaged = Boolean(project && project.vendorIds.length === 0);
+    if (!project || (!vendor && !isInternallyManaged)) {
+      return { ok: false, message: "This project or CSR Associate is no longer available to your account." };
+    }
+    if (isInternallyManaged && session.role === "vendor") {
+      return { ok: false, message: "Only the Astral Foundation team can update an internally managed project." };
+    }
     const files = formData.getAll("mediaFiles").filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const invalidFile = files.find((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"));
     if (invalidFile) return { ok: false, message: `${invalidFile.name} is not a supported image or video.` };
@@ -50,7 +56,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     projectId,
     projectName: project.name,
     vendorId,
-    vendorName: vendor.name,
+    vendorName: vendor?.name ?? "Managed internally",
     submittedByUserId: session.id,
     happenedAt: String(formData.get("happenedAt") ?? new Date().toISOString().slice(0, 10)),
     description,
@@ -116,7 +122,7 @@ export async function deleteMediaAction(formData: FormData) {
 
   const scopedData = await getDashboardData(session);
   const canAccessProject = scopedData.projects.some((project) => project.id === mediaEntry.update.projectId);
-  const canAccessVendor = scopedData.vendors.some((vendor) => vendor.id === mediaEntry.update.vendorId);
+  const canAccessVendor = !mediaEntry.update.vendorId || scopedData.vendors.some((vendor) => vendor.id === mediaEntry.update.vendorId);
   const canDelete =
     session.isSuperAdmin ||
     session.role === "admin" ||

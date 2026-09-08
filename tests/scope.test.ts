@@ -62,3 +62,24 @@ test("an employee can access only the partner explicitly assigned to them", () =
   assert.equal(canAccessUpdate(employee, [project], updateForPartnerA), true);
   assert.equal(canAccessUpdate(employee, [project], updateForPartnerB), false);
 });
+
+test("an internal project update is visible to its assigned employee", () => {
+  const employee: AppUser = {
+    ...partnerUser,
+    id: "employee-1",
+    role: "project_manager",
+    assignedVendorIds: []
+  };
+  const internalProject = {
+    ...project,
+    id: "internal-project",
+    vendorIds: [],
+    vendorName: "Managed internally",
+    internalOwnerId: employee.id
+  };
+
+  assert.equal(
+    canAccessUpdate(employee, [internalProject], { projectId: internalProject.id, vendorId: "" }),
+    true
+  );
+});

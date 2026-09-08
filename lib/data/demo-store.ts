@@ -116,6 +116,8 @@ function createSeedDatabase(): DemoDatabase {
       primaryContactName: "Riya Kale",
       email: "riya@wildroots.test",
       whatsappPhone: "+919999999999",
+      instagramHandle: "",
+      facebookHandle: "",
       organizationType: "NGO",
       geographicalScope: ["Maharashtra"],
       assignedProjectIds: ["77777777-7777-4777-8777-777777777777"],
@@ -130,6 +132,8 @@ function createSeedDatabase(): DemoDatabase {
       primaryContactName: "Aarti Patil",
       email: "aarti@saheli.test",
       whatsappPhone: "+918888888888",
+      instagramHandle: "",
+      facebookHandle: "",
       organizationType: "NGO",
       geographicalScope: ["Maharashtra", "Gujarat"],
       assignedProjectIds: ["99999999-9999-4999-8999-999999999999"],
@@ -351,7 +355,7 @@ export async function createProject(input: Omit<ProjectRecord, "id" | "healthSco
     ...input,
     id: crypto.randomUUID(),
     location: `${input.district}, ${input.state}`,
-    vendorName: vendors.map((vendor) => vendor.name).join(", "),
+    vendorName: vendors.map((vendor) => vendor.name).join(", ") || "Managed internally",
     healthScore: 50,
     readinessScore: 0
   };
@@ -408,7 +412,7 @@ export async function updateProject(input: {
 
   const existing = db.projects[index];
   const vendors = db.vendors.filter((vendor) => input.vendorIds.includes(vendor.id));
-  const vendorName = vendors.map((vendor) => vendor.name).join(", ") || "CSR Associate not assigned";
+  const vendorName = vendors.map((vendor) => vendor.name).join(", ") || "Managed internally";
   const location = `${input.district}, ${input.state}`;
 
   db.projects[index] = {
@@ -616,6 +620,8 @@ export async function updateVendor(input: {
   primaryContactName: string;
   email: string;
   whatsappPhone: string;
+  instagramHandle: string;
+  facebookHandle: string;
   organizationType: string;
   geographicalScope: string[];
   contractValidUntil: string;
@@ -673,7 +679,7 @@ export async function deleteVendor(vendorId: string) {
       ? {
           ...project,
           vendorIds: project.vendorIds.filter((id) => id !== vendorId),
-          vendorName: project.vendorIds.length === 1 ? "CSR Associate not assigned" : project.vendorName
+          vendorName: project.vendorIds.length === 1 ? "Managed internally" : project.vendorName
         }
       : project
   );
@@ -999,11 +1005,11 @@ function filterDataForUser(db: DemoDatabase, session?: AppUser) {
       return {
         ...project,
         vendorIds: partnerIds,
-        vendorName: vendors.filter((vendor) => partnerIds.includes(vendor.id)).map((vendor) => vendor.name).join(", ") || "No CSR Associate assigned"
+        vendorName: vendors.filter((vendor) => partnerIds.includes(vendor.id)).map((vendor) => vendor.name).join(", ") || "Managed internally"
       };
     });
   const updates = db.updates.filter(
-    (update) => visibleProjectIds.has(update.projectId) && visibleVendorIds.has(update.vendorId)
+    (update) => visibleProjectIds.has(update.projectId) && (!update.vendorId || visibleVendorIds.has(update.vendorId))
   );
   const updateIds = new Set(updates.map((update) => update.id));
   const approvals = db.approvals.filter((approval) => updateIds.has(approval.updateId));

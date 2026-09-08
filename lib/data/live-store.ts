@@ -123,6 +123,8 @@ async function ensureSeeded() {
             primary_contact_name: vendor.primaryContactName,
             email: vendor.email || null,
             whatsapp_phone: vendor.whatsappPhone || null,
+            instagram_handle: vendor.instagramHandle || null,
+            facebook_handle: vendor.facebookHandle || null,
             organization_type: vendor.organizationType || null,
             geographical_scope: vendor.geographicalScope,
             contract_valid_until: vendor.contractValidUntil || null,
@@ -281,6 +283,8 @@ async function fetchDatabase(): Promise<DemoDatabase> {
     primaryContactName: row.primary_contact_name,
     email: row.email ?? "",
     whatsappPhone: row.whatsapp_phone ?? "",
+    instagramHandle: row.instagram_handle ?? "",
+    facebookHandle: row.facebook_handle ?? "",
     organizationType: row.organization_type ?? "",
     geographicalScope: row.geographical_scope ?? [],
     assignedProjectIds: linkRows.filter((link: any) => link.vendor_id === row.id).map((link: any) => link.project_id),
@@ -305,7 +309,7 @@ async function fetchDatabase(): Promise<DemoDatabase> {
       healthScore: row.health_score ?? 0,
       readinessScore: row.content_readiness_average ?? 0,
       reportingFrequency: row.reporting_frequency,
-      vendorName: vendorNames.join(", ") || "CSR Associate not assigned",
+      vendorName: vendorNames.join(", ") || "Managed internally",
       vendorIds,
       strategicTags: row.strategic_tags ?? [],
       emotionalTags: row.emotional_tags ?? [],
@@ -462,11 +466,11 @@ function filterDataForUser(db: DemoDatabase, session?: AppUser) {
       return {
         ...project,
         vendorIds: partnerIds,
-        vendorName: vendors.filter((vendor) => partnerIds.includes(vendor.id)).map((vendor) => vendor.name).join(", ") || "No CSR Associate assigned"
+        vendorName: vendors.filter((vendor) => partnerIds.includes(vendor.id)).map((vendor) => vendor.name).join(", ") || "Managed internally"
       };
     });
   const updates = db.updates.filter(
-    (update) => visibleProjectIds.has(update.projectId) && visibleVendorIds.has(update.vendorId)
+    (update) => visibleProjectIds.has(update.projectId) && (!update.vendorId || visibleVendorIds.has(update.vendorId))
   );
   const updateIds = new Set(updates.map((update) => update.id));
   const approvals = db.approvals.filter((approval) => updateIds.has(approval.updateId));
@@ -647,6 +651,8 @@ export async function createVendor(input: Omit<VendorRecord, "id" | "assignedPro
       primary_contact_name: input.primaryContactName,
       email: input.email || null,
       whatsapp_phone: input.whatsappPhone || null,
+      instagram_handle: input.instagramHandle || null,
+      facebook_handle: input.facebookHandle || null,
       organization_type: input.organizationType || null,
       geographical_scope: input.geographicalScope,
       contract_valid_until: input.contractValidUntil || null,
@@ -752,6 +758,8 @@ export async function updateVendor(input: {
   primaryContactName: string;
   email: string;
   whatsappPhone: string;
+  instagramHandle: string;
+  facebookHandle: string;
   organizationType: string;
   geographicalScope: string[];
   contractValidUntil: string;
@@ -766,6 +774,8 @@ export async function updateVendor(input: {
       primary_contact_name: input.primaryContactName,
       email: input.email || null,
       whatsapp_phone: input.whatsappPhone || null,
+      instagram_handle: input.instagramHandle || null,
+      facebook_handle: input.facebookHandle || null,
       organization_type: input.organizationType || null,
       geographical_scope: input.geographicalScope,
       contract_valid_until: input.contractValidUntil || null,

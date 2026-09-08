@@ -10,12 +10,14 @@ type UpdateWizardProps = {
   projects: ProjectRecord[];
   vendors: VendorRecord[];
   defaultVendorId?: string;
+  initialProjectId?: string;
 };
 
 const DRAFT_KEY = "foundation-hub:update-draft:v2";
 
-export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizardProps) {
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
+export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjectId }: UpdateWizardProps) {
+  const validInitialProjectId = projects.some((project) => project.id === initialProjectId) ? initialProjectId : projects[0]?.id;
+  const [projectId, setProjectId] = useState(validInitialProjectId ?? "");
   const [description, setDescription] = useState("");
   const [progressPercent, setProgressPercent] = useState(50);
   const [reachCount, setReachCount] = useState("");
@@ -72,7 +74,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
       const saved = window.localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved) as Record<string, unknown>;
-        setProjectId(String(draft.projectId ?? projects[0]?.id ?? ""));
+        setProjectId(initialProjectId && projects.some((project) => project.id === initialProjectId) ? initialProjectId : String(draft.projectId ?? projects[0]?.id ?? ""));
         setDescription(String(draft.description ?? ""));
         setProgressPercent(Number(draft.progressPercent ?? 50));
         setReachCount(String(draft.reachCount ?? ""));
@@ -91,7 +93,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
     } finally {
       setDraftReady(true);
     }
-  }, [projects]);
+  }, [initialProjectId, projects]);
 
   useEffect(() => {
     if (!draftReady || (!description.trim() && !reachCount)) return;
@@ -116,8 +118,8 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
   }
 
   function submitUpdate() {
-    if (!selectedProject || !selectedVendor) {
-      setStatus("This project needs an assigned CSR Associate before you can submit an update.");
+    if (!selectedProject) {
+      setStatus("Select a project before submitting an update.");
       return;
     }
     if (!description.trim()) {
@@ -131,7 +133,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
       const formData = new FormData();
       const fields = {
         projectId: selectedProject.id,
-        vendorId: selectedVendor.id,
+        vendorId: selectedVendor?.id ?? "",
         happenedAt: new Date().toISOString().slice(0, 10),
         description,
         beneficiariesCount: reachCount,
@@ -170,7 +172,9 @@ export function UpdateWizard({ projects, vendors, defaultVendorId }: UpdateWizar
           <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="h-12 w-full rounded-xl px-4">
             {projects.map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
           </select>
-          {selectedVendor ? <span className="mt-2 block text-xs text-[var(--gray-mid)]">CSR Associate: {selectedVendor.name}</span> : null}
+          <span className="mt-2 block text-xs text-[var(--gray-mid)]">
+            {selectedVendor ? `CSR Associate: ${selectedVendor.name}` : "Managed internally by the Astral Foundation team"}
+          </span>
         </label>
 
         <label className="block">

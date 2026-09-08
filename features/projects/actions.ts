@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/session";
 import { canCreateProject, canManageProject } from "@/lib/auth/project-permissions";
-import { createProject, deleteProject, updateProject } from "@/lib/data/demo-store";
+import { createProject, deleteProject, getDashboardData, updateProject } from "@/lib/data/demo-store";
 import type { ProjectRecord } from "@/types/domain";
 
 export async function createProjectAction(formData: FormData) {
@@ -13,17 +14,20 @@ export async function createProjectAction(formData: FormData) {
     return;
   }
 
+  const managementType = String(formData.get("managementType") ?? "");
   const requestedVendorIds = formData.getAll("vendorIds").map(String);
-  const vendorIds = requestedVendorIds;
+  if (managementType !== "csr" && managementType !== "internal") return;
+  if (managementType === "csr" && requestedVendorIds.length === 0) return;
+  const vendorIds = managementType === "internal" ? [] : requestedVendorIds;
 
-  await createProject({
+  const project = await createProject({
     name: String(formData.get("name") ?? ""),
     category: String(formData.get("category") ?? ""),
     subCategory: String(formData.get("subCategory") ?? ""),
     state: String(formData.get("state") ?? ""),
     district: String(formData.get("district") ?? ""),
     status: String(formData.get("status") ?? "draft") as ProjectRecord["status"],
-    reportingFrequency: String(formData.get("reportingFrequency") ?? "weekly"),
+    reportingFrequency: "weekly",
     vendorIds,
     strategicTags: String(formData.get("strategicTags") ?? "")
       .split(",")
@@ -33,7 +37,7 @@ export async function createProjectAction(formData: FormData) {
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),
-    budgetInr: Number(formData.get("budgetInr") ?? 0),
+    budgetInr: 0,
     internalOwnerId: String(formData.get("internalOwnerId") ?? ""),
     beneficiaryTarget: Number(formData.get("beneficiaryTarget") ?? 0),
     projectBrief: String(formData.get("projectBrief") ?? ""),
@@ -44,19 +48,24 @@ export async function createProjectAction(formData: FormData) {
 
   revalidatePath("/projects");
   revalidatePath("/dashboard");
+  if (project) redirect(`/projects/${project.id}`);
 }
 
 export async function updateProjectAction(formData: FormData) {
   const session = await requireSession();
   const projectId = String(formData.get("projectId") ?? "");
-  if (!canManageProject(session, projectId)) {
-    return;
-  }
+  const scopedData = await getDashboardData(session);
+  const existingProject = scopedData.projects.find((project) => project.id === projectId);
+  if (!existingProject) return;
+  if (!canManageProject(session, projectId, existingProject.internalOwnerId)) return;
 
+  const managementType = session.role === "vendor" ? "csr" : String(formData.get("managementType") ?? "");
   const requestedVendorIds = formData.getAll("vendorIds").map(String);
+  if (managementType !== "csr" && managementType !== "internal") return;
+  if (managementType === "csr" && requestedVendorIds.length === 0) return;
   const vendorIds = session.role === "vendor"
     ? requestedVendorIds.filter((id) => session.assignedVendorIds.includes(id))
-    : requestedVendorIds;
+    : managementType === "internal" ? [] : requestedVendorIds;
   if (session.role === "vendor" && vendorIds.length === 0) return;
 
   await updateProject({
@@ -67,7 +76,7 @@ export async function updateProjectAction(formData: FormData) {
     state: String(formData.get("state") ?? ""),
     district: String(formData.get("district") ?? ""),
     status: String(formData.get("status") ?? "draft") as ProjectRecord["status"],
-    reportingFrequency: String(formData.get("reportingFrequency") ?? "weekly"),
+    reportingFrequency: existingProject.reportingFrequency,
     vendorIds,
     strategicTags: String(formData.get("strategicTags") ?? "")
       .split(",")
@@ -77,8 +86,8 @@ export async function updateProjectAction(formData: FormData) {
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),
-    budgetInr: Number(formData.get("budgetInr") ?? 0),
-    internalOwnerId: session.role === "vendor" ? session.id : String(formData.get("internalOwnerId") ?? ""),
+    budgetInr: existingProject.budgetInr,
+    internalOwnerId: String(formData.get("internalOwnerId") ?? ""),
     beneficiaryTarget: Number(formData.get("beneficiaryTarget") ?? 0),
     projectBrief: String(formData.get("projectBrief") ?? ""),
     startDate: String(formData.get("startDate") ?? ""),
@@ -95,9 +104,9 @@ export async function updateProjectAction(formData: FormData) {
 export async function deleteProjectAction(formData: FormData) {
   const session = await requireSession();
   const projectId = String(formData.get("projectId") ?? "");
-  if (!canManageProject(session, projectId)) {
-    return;
-  }
+  const scopedData = await getDashboardData(session);
+  const existingProject = scopedData.projects.find((project) => project.id === projectId);
+  if (!existingProject || !canManageProject(session, projectId, existingProject.internalOwnerId)) return;
 
   await deleteProject(projectId);
   revalidatePath("/projects");

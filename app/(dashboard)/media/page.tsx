@@ -83,14 +83,14 @@ export default async function MediaPage() {
                       <span>{item.updateDate}</span>
                     </div>
                     <div className="mt-4 flex flex-wrap items-center gap-3">
-                      <a
-                        href={item.accessUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-[var(--border)] bg-[#f8f9fc] px-3 py-2 text-xs font-medium text-[var(--foreground)]"
-                      >
-                        Open file
-                      </a>
+                      {item.accessUrl ? <a
+                          href={item.accessUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-[var(--border)] bg-[#f8f9fc] px-3 py-2 text-xs font-medium text-[var(--foreground)]"
+                        >
+                          Open file
+                        </a> : <span className="rounded-full bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">File unavailable</span>}
                       <span className="text-xs text-[var(--gray-mid)]">
                         {item.mimeType} · {(item.sizeBytes / 1024 / 1024).toFixed(2)} MB
                       </span>

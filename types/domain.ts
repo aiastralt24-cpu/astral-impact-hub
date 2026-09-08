@@ -30,6 +30,8 @@ export type VendorRecord = {
   primaryContactName: string;
   email: string;
   whatsappPhone: string;
+  instagramHandle: string;
+  facebookHandle: string;
   organizationType: string;
   geographicalScope: string[];
   assignedProjectIds: string[];

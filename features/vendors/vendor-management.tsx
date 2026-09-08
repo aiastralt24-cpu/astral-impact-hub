@@ -1,20 +1,23 @@
 import { createVendorAction, deleteVendorAction, updateVendorAction } from "@/features/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, VendorRecord } from "@/types/domain";
+import Link from "next/link";
 
 type VendorManagementProps = {
   vendors: VendorRecord[];
   session: AppUser;
+  showSummary?: boolean;
+  showCreate?: boolean;
 };
 
-export function VendorManagement({ vendors, session }: VendorManagementProps) {
+export function VendorManagement({ vendors, session, showSummary = true, showCreate = true }: VendorManagementProps) {
   const averageScore = Math.round(vendors.reduce((sum, vendor) => sum + vendor.score, 0) / Math.max(vendors.length, 1));
   const canManageVendors = session.role !== "vendor";
   const canDeleteVendors = Boolean(session.isSuperAdmin || session.role === "admin");
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3">
+      {showSummary ? <section className="grid gap-4 md:grid-cols-3">
         <div className="glass-card rounded-[28px] p-5">
           <p className="text-sm font-semibold text-[var(--foreground)]">Active CSR Associates</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{vendors.length}</p>
@@ -30,15 +33,15 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{vendors.filter((vendor) => vendor.score < 70).length}</p>
           <p className="mt-2 text-sm text-[var(--gray-mid)]">CSR Associates that need closer support this cycle</p>
         </div>
-      </section>
+      </section> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
+      <div className={vendors.length > 0 && showCreate ? "grid gap-6 xl:grid-cols-[1.35fr_0.95fr]" : "grid max-w-2xl gap-6"}>
         <div className="space-y-4">
         {vendors.map((vendor) => (
           <div key={vendor.id} className="glass-card rounded-[28px] p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-display text-2xl font-black text-[var(--foreground)]">{vendor.name}</h3>
+                <Link href={`/vendors/${vendor.id}`} className="font-display text-2xl font-black text-[var(--foreground)] hover:text-[var(--primary)]">{vendor.name}</Link>
                 <p className="mt-1 text-sm text-[var(--gray-mid)]">{vendor.primaryContactName}</p>
               </div>
               <div className={`rounded-full px-3 py-2 text-sm font-semibold ring-1 ${vendor.score >= 70 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-amber-50 text-amber-700 ring-amber-200"}`}>
@@ -59,6 +62,12 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
                 <p className="mt-1 font-medium text-[var(--foreground)]">{vendor.assignedProjectIds.length}</p>
               </div>
             </div>
+            {vendor.instagramHandle || vendor.facebookHandle ? (
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                {vendor.instagramHandle ? <p><span className="text-[var(--gray-mid)]">Instagram:</span> <span className="font-medium text-[var(--foreground)]">{vendor.instagramHandle}</span></p> : null}
+                {vendor.facebookHandle ? <p><span className="text-[var(--gray-mid)]">Facebook:</span> <span className="font-medium text-[var(--foreground)]">{vendor.facebookHandle}</span></p> : null}
+              </div>
+            ) : null}
 
             {canManageVendors ? (
               <details className="mt-4 rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
@@ -69,12 +78,12 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
                   <input name="primaryContactName" defaultValue={vendor.primaryContactName} placeholder="Primary contact" className="h-12 rounded-2xl px-4" />
                   <input name="email" defaultValue={vendor.email} placeholder="Email" className="h-12 rounded-2xl px-4" />
                   <input name="whatsappPhone" defaultValue={vendor.whatsappPhone} placeholder="WhatsApp phone" className="h-12 rounded-2xl px-4" />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input name="instagramHandle" defaultValue={vendor.instagramHandle} placeholder="Instagram handle or URL (optional)" className="h-12 rounded-2xl px-4" />
+                    <input name="facebookHandle" defaultValue={vendor.facebookHandle} placeholder="Facebook page or URL (optional)" className="h-12 rounded-2xl px-4" />
+                  </div>
                   <input name="organizationType" defaultValue={vendor.organizationType} placeholder="Organization type" className="h-12 rounded-2xl px-4" />
                   <input name="geographicalScope" defaultValue={vendor.geographicalScope.join(", ")} placeholder="States, comma separated" className="h-12 rounded-2xl px-4" />
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <input name="contractValidUntil" defaultValue={vendor.contractValidUntil} type="date" className="h-12 rounded-2xl px-4" />
-                    <input name="rateCardInr" defaultValue={vendor.rateCardInr} type="number" placeholder="Rate card" className="h-12 rounded-2xl px-4" />
-                  </div>
                   <textarea name="notes" defaultValue={vendor.notes} placeholder="Notes" className="min-h-28 rounded-3xl px-4 py-3" />
                   <div className="flex flex-wrap gap-3">
                     <ConfirmSubmitButton
@@ -105,7 +114,7 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
         ))}
         </div>
 
-        {canManageVendors ? (
+        {canManageVendors && showCreate ? (
         <form action={createVendorAction} className="glass-card rounded-[28px] p-6">
         <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Onboard CSR Associate</p>
         <div className="mt-4 grid gap-4">
@@ -113,12 +122,12 @@ export function VendorManagement({ vendors, session }: VendorManagementProps) {
           <input name="primaryContactName" placeholder="Primary contact" className="h-12 rounded-2xl px-4" />
           <input name="email" placeholder="Email" className="h-12 rounded-2xl px-4" />
           <input name="whatsappPhone" placeholder="WhatsApp phone" className="h-12 rounded-2xl px-4" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <input name="instagramHandle" placeholder="Instagram handle or URL (optional)" className="h-12 rounded-2xl px-4" />
+            <input name="facebookHandle" placeholder="Facebook page or URL (optional)" className="h-12 rounded-2xl px-4" />
+          </div>
           <input name="organizationType" placeholder="Organization type" className="h-12 rounded-2xl px-4" />
           <input name="geographicalScope" placeholder="States, comma separated" className="h-12 rounded-2xl px-4" />
-          <div className="grid gap-4 md:grid-cols-2">
-            <input name="contractValidUntil" type="date" className="h-12 rounded-2xl px-4" />
-            <input name="rateCardInr" type="number" placeholder="Rate card" className="h-12 rounded-2xl px-4" />
-          </div>
           <div className="rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
             <p className="text-sm font-medium text-[var(--foreground)]">Optional CSR Associate login</p>
             <p className="mt-1 text-sm text-[var(--gray-mid)]">Employees can onboard the CSR Associate and issue credentials in the same step.</p>

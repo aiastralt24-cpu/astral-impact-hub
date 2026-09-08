@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/session";
 import { assignPartnerToUser, createVendor, createWorkspaceUser, deleteVendor, getDashboardData, updateVendor } from "@/lib/data/demo-store";
@@ -16,13 +17,15 @@ export async function createVendorAction(formData: FormData) {
     primaryContactName: String(formData.get("primaryContactName") ?? ""),
     email: String(formData.get("email") ?? ""),
     whatsappPhone: String(formData.get("whatsappPhone") ?? ""),
+    instagramHandle: String(formData.get("instagramHandle") ?? "").trim(),
+    facebookHandle: String(formData.get("facebookHandle") ?? "").trim(),
     organizationType: String(formData.get("organizationType") ?? ""),
     geographicalScope: String(formData.get("geographicalScope") ?? "")
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),
-    contractValidUntil: String(formData.get("contractValidUntil") ?? ""),
-    rateCardInr: Number(formData.get("rateCardInr") ?? 0),
+    contractValidUntil: "",
+    rateCardInr: 0,
     notes: String(formData.get("notes") ?? "")
   });
 
@@ -50,6 +53,7 @@ export async function createVendorAction(formData: FormData) {
   revalidatePath("/vendors");
   revalidatePath("/projects");
   revalidatePath("/settings");
+  if (vendor) redirect(`/vendors/${vendor.id}`);
 }
 
 export async function updateVendorAction(formData: FormData) {
@@ -60,7 +64,8 @@ export async function updateVendorAction(formData: FormData) {
 
   const vendorId = String(formData.get("vendorId") ?? "");
   const scopedData = await getDashboardData(session);
-  if (!scopedData.vendors.some((vendor) => vendor.id === vendorId)) {
+  const existingVendor = scopedData.vendors.find((vendor) => vendor.id === vendorId);
+  if (!existingVendor) {
     return;
   }
 
@@ -70,13 +75,15 @@ export async function updateVendorAction(formData: FormData) {
     primaryContactName: String(formData.get("primaryContactName") ?? ""),
     email: String(formData.get("email") ?? ""),
     whatsappPhone: String(formData.get("whatsappPhone") ?? ""),
+    instagramHandle: String(formData.get("instagramHandle") ?? "").trim(),
+    facebookHandle: String(formData.get("facebookHandle") ?? "").trim(),
     organizationType: String(formData.get("organizationType") ?? ""),
     geographicalScope: String(formData.get("geographicalScope") ?? "")
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),
-    contractValidUntil: String(formData.get("contractValidUntil") ?? ""),
-    rateCardInr: Number(formData.get("rateCardInr") ?? 0),
+    contractValidUntil: existingVendor.contractValidUntil,
+    rateCardInr: existingVendor.rateCardInr,
     notes: String(formData.get("notes") ?? "")
   });
 

@@ -20,7 +20,7 @@ const badgeMap = {
 } as const;
 
 export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQueueProps) {
-  const actionable = updates.filter((update) =>
+  const visibleUpdates = updates.filter((update) =>
     session.role === "vendor" ? update.submittedByUserId === session.id : true
   );
 
@@ -41,9 +41,9 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
           <h2 className="font-display text-lg font-bold text-[var(--foreground)]">Previous updates</h2>
           <p className="mt-1 text-sm text-[var(--gray-mid)]">Check what you submitted and whether changes are needed.</p>
         </div>
-        {actionable.length > 0 ? (
+        {visibleUpdates.length > 0 ? (
           <div className="divide-y divide-[var(--border)]">
-            {actionable.map((update) => (
+            {visibleUpdates.map((update) => (
               <div key={update.id} className="px-5 py-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -67,63 +67,50 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
     );
   }
 
+  const actionable = visibleUpdates.filter((update) => ["pending", "in_review", "revision_requested"].includes(update.status));
+
   return (
-    <section className="glass-card rounded-[32px] p-5 sm:p-6">
+    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Updates awaiting review</p>
-          <h2 className="mt-2 font-display text-[26px] font-black tracking-[-0.04em] text-[var(--foreground)]">Waiting for attention</h2>
-          <p className="mt-2 max-w-md text-sm leading-6 text-[var(--gray-mid)]">
-            Review one item at a time, leave a note only when it adds clarity, and keep approvals moving.
-          </p>
+        <div className="px-5 py-4 sm:px-6">
+          <h2 className="font-display text-xl font-bold text-[var(--foreground)]">Updates to review</h2>
+          <p className="mt-1 text-sm text-[var(--gray-mid)]">Check each update and choose what should happen next.</p>
         </div>
-        <div className="rounded-[22px] border border-[var(--border)] bg-[#f8f9fc] px-4 py-3 text-right">
-          <p className="text-xs uppercase tracking-[0.18em] text-[var(--gray-mid)]">Items</p>
-          <p className="mt-2 text-2xl font-semibold text-[var(--foreground)]">{actionable.length}</p>
+        <div className="m-4 rounded-xl bg-[var(--primary-light)] px-4 py-2 text-center">
+          <p className="text-2xl font-bold text-[var(--primary)]">{actionable.length}</p>
+          <p className="text-xs text-[var(--gray-mid)]">to review</p>
         </div>
       </div>
 
-      <div className="mt-5 space-y-4">
+      <div className="border-t border-[var(--border)]">
         {actionable.length ? (
           actionable.map((update) => (
-            <article key={update.id} className="rounded-[28px] border border-[var(--border)] bg-[#f8f9fc] p-5">
+            <article key={update.id} className="border-b border-[var(--border)] p-5 last:border-b-0 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <Badge variant={badgeMap[update.status]}>{update.status.replaceAll("_", " ")}</Badge>
-                    <Badge variant={update.readinessScore >= 75 ? "approved" : "pending"}>Content readiness {update.readinessScore}</Badge>
-                  </div>
-                  <h3 className="font-display text-[24px] font-bold tracking-[-0.03em] text-[var(--foreground)]">{update.projectName}</h3>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">{update.description}</p>
+                  <Badge variant={badgeMap[update.status]}>{update.status === "revision_requested" ? "Changes requested" : "Needs review"}</Badge>
+                  <h3 className="mt-3 font-display text-xl font-bold text-[var(--foreground)]">{update.projectName}</h3>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wide text-[var(--gray-mid)]">What happened</p>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--foreground)]">{update.description || "No description was provided."}</p>
                 </div>
-                <div className="rounded-[20px] border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--gray-mid)]">
-                  <p>{update.vendorName}</p>
-                  <p className="mt-1">{update.happenedAt}</p>
+                <div className="text-sm text-[var(--gray-mid)] sm:text-right">
+                  <p>Submitted by <strong className="text-[var(--foreground)]">{update.vendorName === "Unknown CSR Associate" ? "Foundation team" : update.vendorName}</strong></p>
+                  <p className="mt-1">Activity date: {update.happenedAt}</p>
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[20px] border border-[var(--border)] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">Progress</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{update.progressPercent}%</p>
-                </div>
-                <div className="rounded-[20px] border border-[var(--border)] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">Media</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{update.media.length}</p>
-                </div>
-                <div className="rounded-[20px] border border-[var(--border)] bg-white p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--gray-mid)]">Revisions</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--foreground)]">{update.revisionCount}</p>
-                </div>
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 rounded-xl bg-[#f8f9fc] px-4 py-3 text-sm">
+                <span><span className="text-[var(--gray-mid)]">Project progress:</span> <strong>{update.progressPercent}%</strong></span>
+                <span><span className="text-[var(--gray-mid)]">Photos/videos:</span> <strong>{update.media.length}</strong></span>
               </div>
 
               {commentsByUpdate[update.id]?.length ? (
-                <div className="mt-4 rounded-[22px] border border-[var(--border)] bg-white p-4">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent-blue)]">Review history</p>
+                <div className="mt-4 rounded-xl bg-amber-50 p-4">
+                  <p className="mb-2 text-sm font-semibold text-amber-900">Previous review notes</p>
                   <div className="space-y-2 text-sm text-[var(--gray-mid)]">
                     {commentsByUpdate[update.id].map((comment) => (
                       <div key={comment.id}>
-                        <strong className="text-[var(--foreground)]">{comment.author}</strong>: {comment.message}
+                        <strong className="text-[var(--foreground)]">{comment.author}</strong>: {comment.message.replace("approve at manager stage", "Approved by the project manager").replace("approve at admin stage", "Approved by the admin")}
                       </div>
                     ))}
                   </div>
@@ -133,12 +120,12 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
               <form action={approvalAction} className="mt-4 space-y-3">
                   <input type="hidden" name="updateId" value={update.id} />
                   <input type="hidden" name="stage" value={session.role === "admin" ? "admin" : "manager"} />
-                  <input
+                  <label className="block text-sm font-medium text-[var(--foreground)]">Note for the team <span className="font-normal text-[var(--gray-mid)]">(required when asking for changes or rejecting)</span><input
                     type="text"
                     name="comment"
-                    placeholder="Add a review note"
-                    className="h-11 w-full rounded-2xl px-4 text-sm"
-                  />
+                    placeholder="Explain clearly what needs to change"
+                    className="mt-2 h-11 w-full rounded-xl px-4 text-sm"
+                  /></label>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <ConfirmSubmitButton
                       name="action"
@@ -175,7 +162,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
           <div className="rounded-[28px] border border-[var(--border)] bg-[#f8f9fc] p-6">
             <p className="text-base font-medium text-[var(--foreground)]">Nothing is waiting right now.</p>
             <p className="mt-2 text-sm leading-6 text-[var(--gray-mid)]">
-              New submissions, review requests, and revision loops will appear here as the workflow moves.
+              New updates will appear here when they need approval.
             </p>
           </div>
         )}

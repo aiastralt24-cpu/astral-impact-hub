@@ -3,8 +3,9 @@ import { getApprovalComments, getDashboardData } from "@/lib/data/demo-store";
 import { ApprovalQueue } from "@/features/updates/approval-queue";
 import { UpdateWizard } from "@/features/updates/update-wizard";
 
-export default async function UpdatesPage() {
+export default async function UpdatesPage({ searchParams }: { searchParams: Promise<{ projectId?: string }> }) {
   const session = await requireSession();
+  const { projectId } = await searchParams;
   const data = await getDashboardData(session);
   const commentsByUpdate = Object.fromEntries(
     await Promise.all(data.updates.map(async (update) => [update.id, await getApprovalComments(update.id)] as const))
@@ -19,7 +20,7 @@ export default async function UpdatesPage() {
       </div>
 
       <div className="grid gap-6 2xl:grid-cols-[minmax(0,1.3fr)_420px]">
-        <UpdateWizard projects={data.projects} vendors={data.vendors} defaultVendorId={vendor?.id} />
+        <UpdateWizard projects={data.projects} vendors={data.vendors} defaultVendorId={vendor?.id} initialProjectId={projectId} />
         <ApprovalQueue updates={data.updates} commentsByUpdate={commentsByUpdate} session={session} />
       </div>
     </div>
