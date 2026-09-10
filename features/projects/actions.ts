@@ -15,6 +15,9 @@ export async function createProjectAction(formData: FormData) {
   }
 
   const managementType = String(formData.get("managementType") ?? "");
+  const startDate = String(formData.get("startDate") ?? "");
+  const endDate = String(formData.get("endDate") ?? "");
+  if (!startDate || !endDate) redirect("/projects/new?error=missing_dates");
   const requestedVendorIds = formData.getAll("vendorIds").map(String);
   if (managementType !== "csr" && managementType !== "internal") return;
   if (managementType === "csr" && requestedVendorIds.length === 0) return;
@@ -41,8 +44,8 @@ export async function createProjectAction(formData: FormData) {
     internalOwnerId: String(formData.get("internalOwnerId") ?? ""),
     beneficiaryTarget: Number(formData.get("beneficiaryTarget") ?? 0),
     projectBrief: String(formData.get("projectBrief") ?? ""),
-    startDate: String(formData.get("startDate") ?? ""),
-    endDate: String(formData.get("endDate") ?? ""),
+    startDate,
+    endDate,
     requireAdminApproval: formData.get("requireAdminApproval") === "on"
   });
 
@@ -54,6 +57,9 @@ export async function createProjectAction(formData: FormData) {
 export async function updateProjectAction(formData: FormData) {
   const session = await requireSession();
   const projectId = String(formData.get("projectId") ?? "");
+  const startDate = String(formData.get("startDate") ?? "");
+  const endDate = String(formData.get("endDate") ?? "");
+  if (!startDate || !endDate) return;
   const scopedData = await getDashboardData(session);
   const existingProject = scopedData.projects.find((project) => project.id === projectId);
   if (!existingProject) return;
@@ -90,8 +96,8 @@ export async function updateProjectAction(formData: FormData) {
     internalOwnerId: String(formData.get("internalOwnerId") ?? ""),
     beneficiaryTarget: Number(formData.get("beneficiaryTarget") ?? 0),
     projectBrief: String(formData.get("projectBrief") ?? ""),
-    startDate: String(formData.get("startDate") ?? ""),
-    endDate: String(formData.get("endDate") ?? ""),
+    startDate,
+    endDate,
     requireAdminApproval: formData.get("requireAdminApproval") === "on"
   });
 

@@ -60,8 +60,8 @@ export function ProjectManagement({ projects, vendors, managers, session, showCr
                     <input name="district" defaultValue={project.district} placeholder="District" className="h-12 rounded-2xl px-4" />
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <input name="startDate" defaultValue={project.startDate} type="date" className="h-12 rounded-2xl px-4" />
-                    <input name="endDate" defaultValue={project.endDate} type="date" className="h-12 rounded-2xl px-4" />
+                    <input name="startDate" aria-label="Start date" defaultValue={project.startDate} type="date" required className="h-12 rounded-2xl px-4" />
+                    <input name="endDate" aria-label="End date" defaultValue={project.endDate} type="date" required className="h-12 rounded-2xl px-4" />
                   </div>
                   {session.role === "vendor" ? (
                     <>
@@ -139,7 +139,7 @@ export function ProjectManagement({ projects, vendors, managers, session, showCr
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Start date" required><input name="startDate" type="date" required className="h-12 rounded-2xl px-4" /></Field>
-            <Field label="Expected end date"><input name="endDate" type="date" className="h-12 rounded-2xl px-4" /></Field>
+            <Field label="End date" required><input name="endDate" type="date" required className="h-12 rounded-2xl px-4" /></Field>
           </div>
           <Field label="Project manager" required><select name="internalOwnerId" required className="h-12 rounded-2xl px-4">
             {managers.map((manager) => (
