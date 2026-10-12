@@ -120,3 +120,39 @@ export async function deleteProjectAction(formData: FormData) {
   revalidatePath("/media");
   revalidatePath("/updates");
 }
+
+export async function assignProjectToVendorAction(formData: FormData) {
+  const session = await requireSession();
+  if (session.role === "vendor") return;
+  const projectId = String(formData.get("projectId") ?? "");
+  const vendorId = String(formData.get("vendorId") ?? "");
+  const data = await getDashboardData(session);
+  const project = data.projects.find((item) => item.id === projectId);
+  const vendor = data.vendors.find((item) => item.id === vendorId);
+  if (!project || !vendor || !canManageProject(session, project.id, project.internalOwnerId)) return;
+  if (project.vendorIds.includes(vendorId)) redirect(`/vendors/${vendorId}?project=already-assigned`);
+
+  await updateProject({
+    projectId: project.id,
+    name: project.name,
+    category: project.category,
+    subCategory: project.subCategory,
+    state: project.state,
+    district: project.district,
+    status: project.status,
+    reportingFrequency: project.reportingFrequency,
+    vendorIds: [...project.vendorIds, vendorId],
+    strategicTags: project.strategicTags,
+    emotionalTags: project.emotionalTags,
+    budgetInr: project.budgetInr,
+    internalOwnerId: project.internalOwnerId,
+    beneficiaryTarget: project.beneficiaryTarget,
+    projectBrief: project.projectBrief,
+    startDate: project.startDate,
+    endDate: project.endDate,
+    requireAdminApproval: project.requireAdminApproval
+  });
+  revalidatePath("/projects");
+  revalidatePath(`/vendors/${vendorId}`);
+  redirect(`/vendors/${vendorId}?project=assigned`);
+}

@@ -16,9 +16,10 @@ type ProjectManagementProps = {
   managers: AppUser[];
   session: AppUser;
   showCreate?: boolean;
+  defaultVendorIds?: string[];
 };
 
-export function ProjectManagement({ projects, vendors, managers, session, showCreate = true }: ProjectManagementProps) {
+export function ProjectManagement({ projects, vendors, managers, session, showCreate = true, defaultVendorIds }: ProjectManagementProps) {
   const canCreate = canCreateProject(session);
 
   return (
@@ -148,7 +149,7 @@ export function ProjectManagement({ projects, vendors, managers, session, showCr
               </option>
             ))}
           </select></Field>
-          <ProjectManagementChoice vendors={vendors} />
+          <ProjectManagementChoice vendors={vendors} defaultVendorIds={defaultVendorIds} />
           <Field label="Project overview" required><textarea name="projectBrief" placeholder="What will this project do, and for whom?" required className="min-h-28 rounded-3xl px-4 py-3" /></Field>
           <details className="rounded-2xl border border-[var(--border)] bg-white p-4"><summary className="cursor-pointer text-sm font-semibold text-[var(--primary)]">Add optional details</summary><div className="mt-4 grid gap-4"><Field label="Project highlights"><input name="strategicTags" placeholder="Separate items with commas" className="h-12 rounded-2xl px-4" /></Field><Field label="Impact themes"><input name="emotionalTags" placeholder="Separate items with commas" className="h-12 rounded-2xl px-4" /></Field><Field label="People to be reached"><input name="beneficiaryTarget" type="number" min="0" placeholder="0" className="h-12 rounded-2xl px-4" /></Field></div></details>
           <Field label="Project status" required><select name="status" className="h-12 rounded-2xl px-4">

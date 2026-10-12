@@ -1,4 +1,4 @@
-import { createVendorAction, deleteVendorAction, updateVendorAction } from "@/features/vendors/actions";
+import { createVendorAction, deleteVendorAction, updateVendorAction, updateVendorCredentialsAction } from "@/features/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, VendorRecord } from "@/types/domain";
 import Link from "next/link";
@@ -8,25 +8,20 @@ type VendorManagementProps = {
   session: AppUser;
   showSummary?: boolean;
   showCreate?: boolean;
+  linkedUser?: AppUser;
 };
 
-export function VendorManagement({ vendors, session, showSummary = true, showCreate = true }: VendorManagementProps) {
-  const averageScore = Math.round(vendors.reduce((sum, vendor) => sum + vendor.score, 0) / Math.max(vendors.length, 1));
+export function VendorManagement({ vendors, session, showSummary = true, showCreate = true, linkedUser }: VendorManagementProps) {
   const canManageVendors = session.role !== "vendor";
   const canDeleteVendors = Boolean(session.isSuperAdmin || session.role === "admin");
 
   return (
     <div className="space-y-6">
-      {showSummary ? <section className="grid gap-4 md:grid-cols-3">
+      {showSummary ? <section className="grid gap-4 md:grid-cols-2">
         <div className="glass-card rounded-[28px] p-5">
           <p className="text-sm font-semibold text-[var(--foreground)]">Active CSR Associates</p>
           <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{vendors.length}</p>
           <p className="mt-2 text-sm text-[var(--gray-mid)]">CSR Associates available across current projects</p>
-        </div>
-        <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Average score</p>
-          <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{averageScore}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Overall reliability across reporting and quality</p>
         </div>
         <div className="glass-card rounded-[28px] p-5">
           <p className="text-sm font-semibold text-[var(--foreground)]">Needs follow-up</p>
@@ -39,13 +34,10 @@ export function VendorManagement({ vendors, session, showSummary = true, showCre
         <div className="space-y-4">
         {vendors.map((vendor) => (
           <div key={vendor.id} className="glass-card rounded-[28px] p-5">
-            <div className="flex items-start justify-between gap-4">
+            <div>
               <div>
                 <Link href={`/vendors/${vendor.id}`} className="font-display text-2xl font-black text-[var(--foreground)] hover:text-[var(--primary)]">{vendor.name}</Link>
                 <p className="mt-1 text-sm text-[var(--gray-mid)]">{vendor.primaryContactName}</p>
-              </div>
-              <div className={`rounded-full px-3 py-2 text-sm font-semibold ring-1 ${vendor.score >= 70 ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-amber-50 text-amber-700 ring-amber-200"}`}>
-                Score {vendor.score}
               </div>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -66,6 +58,26 @@ export function VendorManagement({ vendors, session, showSummary = true, showCre
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
                 {vendor.instagramHandle ? <p><span className="text-[var(--gray-mid)]">Instagram:</span> <span className="font-medium text-[var(--foreground)]">{vendor.instagramHandle}</span></p> : null}
                 {vendor.facebookHandle ? <p><span className="text-[var(--gray-mid)]">Facebook:</span> <span className="font-medium text-[var(--foreground)]">{vendor.facebookHandle}</span></p> : null}
+              </div>
+            ) : null}
+
+            {linkedUser ? (
+              <div className="mt-4 rounded-[24px] border border-[var(--border)] bg-[#f8f9fc] p-4">
+                <p className="text-sm font-semibold text-[var(--foreground)]">CSR Associate login</p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-white p-3 ring-1 ring-[var(--border)]"><p className="text-xs text-[var(--gray-mid)]">User ID</p><p className="mt-1 font-medium text-[var(--foreground)]">{linkedUser.username}</p></div>
+                  <div className="rounded-2xl bg-white p-3 ring-1 ring-[var(--border)]"><p className="text-xs text-[var(--gray-mid)]">Password</p><p className="mt-1 font-medium text-[var(--foreground)]">{linkedUser.password}</p></div>
+                </div>
+                <details className="mt-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-[var(--primary)]">Change user ID or password</summary>
+                  <form action={updateVendorCredentialsAction} className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input type="hidden" name="userId" value={linkedUser.id} />
+                    <input type="hidden" name="vendorId" value={vendor.id} />
+                    <input name="username" defaultValue={linkedUser.username} required aria-label="User ID" className="h-11 rounded-2xl px-4" />
+                    <input name="password" defaultValue={linkedUser.password} required aria-label="Password" className="h-11 rounded-2xl px-4" />
+                    <ConfirmSubmitButton pendingLabel="Saving..." className="rounded-full bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white sm:col-span-2 sm:w-fit">Save login details</ConfirmSubmitButton>
+                  </form>
+                </details>
               </div>
             ) : null}
 
