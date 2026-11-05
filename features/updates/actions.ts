@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
 import { createUpdate, deleteMediaAssetById, findMediaAsset, getDashboardData, recordApproval } from "@/lib/data/demo-store";
+import { MAX_MEDIA_FILE_BYTES, MAX_MEDIA_REQUEST_BYTES, formatMediaLimit } from "@/lib/media/limits";
 import { deleteMedia, uploadMedia } from "@/lib/media/storage";
 import type { ApprovalRecord } from "@/types/domain";
 
@@ -35,8 +36,12 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     const files = formData.getAll("mediaFiles").filter((entry): entry is File => entry instanceof File && entry.size > 0);
     const invalidFile = files.find((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"));
     if (invalidFile) return { ok: false, message: `${invalidFile.name} is not a supported image or video.` };
-    const oversizedFile = files.find((file) => file.size > 25 * 1024 * 1024);
-    if (oversizedFile) return { ok: false, message: `${oversizedFile.name} is larger than the 25 MB limit.` };
+    const oversizedFile = files.find((file) => file.size > MAX_MEDIA_FILE_BYTES);
+    if (oversizedFile) return { ok: false, message: `${oversizedFile.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} limit.` };
+    const totalMediaBytes = files.reduce((total, file) => total + file.size, 0);
+    if (totalMediaBytes > MAX_MEDIA_REQUEST_BYTES) {
+      return { ok: false, message: `The selected media is ${formatMediaLimit(totalMediaBytes)}. Keep each submission below ${formatMediaLimit(MAX_MEDIA_REQUEST_BYTES)}.` };
+    }
 
     const media = await uploadMedia(
       await Promise.all(files.map(async (file) => ({

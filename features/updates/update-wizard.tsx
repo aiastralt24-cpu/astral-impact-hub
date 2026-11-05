@@ -4,6 +4,8 @@ import { startTransition, useEffect, useMemo, useState } from "react";
 import { Camera, ChevronDown, Save, Send, X } from "lucide-react";
 
 import { createUpdateAction } from "@/features/updates/actions";
+import { resolveAssignedProjectId } from "@/lib/domain/project-selection";
+import { MAX_MEDIA_FILE_BYTES, MAX_MEDIA_REQUEST_BYTES, formatMediaLimit } from "@/lib/media/limits";
 import type { ProjectRecord, VendorRecord } from "@/types/domain";
 
 type UpdateWizardProps = {
@@ -16,8 +18,7 @@ type UpdateWizardProps = {
 const DRAFT_KEY = "foundation-hub:update-draft:v2";
 
 export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjectId }: UpdateWizardProps) {
-  const validInitialProjectId = projects.some((project) => project.id === initialProjectId) ? initialProjectId : projects[0]?.id;
-  const [projectId, setProjectId] = useState(validInitialProjectId ?? "");
+  const [projectId, setProjectId] = useState(() => resolveAssignedProjectId(projects, initialProjectId));
   const [description, setDescription] = useState("");
   const [progressPercent, setProgressPercent] = useState(50);
   const [reachCount, setReachCount] = useState("");
@@ -74,7 +75,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
       const saved = window.localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved) as Record<string, unknown>;
-        setProjectId(initialProjectId && projects.some((project) => project.id === initialProjectId) ? initialProjectId : String(draft.projectId ?? projects[0]?.id ?? ""));
+        setProjectId(resolveAssignedProjectId(projects, initialProjectId, typeof draft.projectId === "string" ? draft.projectId : undefined));
         setDescription(String(draft.description ?? ""));
         setProgressPercent(Number(draft.progressPercent ?? 50));
         setReachCount(String(draft.reachCount ?? ""));
@@ -93,6 +94,10 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
     } finally {
       setDraftReady(true);
     }
+  }, [initialProjectId, projects]);
+
+  useEffect(() => {
+    setProjectId((current) => resolveAssignedProjectId(projects, current, initialProjectId));
   }, [initialProjectId, projects]);
 
   useEffect(() => {
@@ -126,12 +131,23 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
       setStatus("Please describe what happened.");
       return;
     }
+    const oversizedFile = mediaFiles.find((file) => file.size > MAX_MEDIA_FILE_BYTES);
+    if (oversizedFile) {
+      setStatus(`${oversizedFile.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} limit.`);
+      return;
+    }
+    const totalMediaBytes = mediaFiles.reduce((total, file) => total + file.size, 0);
+    if (totalMediaBytes > MAX_MEDIA_REQUEST_BYTES) {
+      setStatus(`The selected media is ${formatMediaLimit(totalMediaBytes)}. Keep each submission below ${formatMediaLimit(MAX_MEDIA_REQUEST_BYTES)} or upload fewer images at a time.`);
+      return;
+    }
 
     setIsSubmitting(true);
     setStatus("Submitting your update...");
     startTransition(async () => {
-      const formData = new FormData();
-      const fields = {
+      try {
+        const formData = new FormData();
+        const fields = {
         projectId: selectedProject.id,
         vendorId: selectedVendor?.id ?? "",
         happenedAt: new Date().toISOString().slice(0, 10),
@@ -150,12 +166,17 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         documentationOnly: "false",
         sensitiveContent: String(sensitiveContent)
       };
-      Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
-      mediaFiles.forEach((file) => formData.append("mediaFiles", file));
-      const result = await createUpdateAction(formData);
-      setStatus(result.message);
-      setIsSubmitting(false);
-      if (result.ok) resetForm();
+        Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
+        mediaFiles.forEach((file) => formData.append("mediaFiles", file));
+        const result = await createUpdateAction(formData);
+        setStatus(result.message);
+        if (result.ok) resetForm();
+      } catch (error) {
+        console.error("Update submission request failed", error);
+        setStatus("The update was not submitted. The image may be too large or the connection was interrupted. Try a smaller image or submit without media.");
+      } finally {
+        setIsSubmitting(false);
+      }
     });
   }
 
@@ -221,6 +242,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
 
         <div>
           <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">Photos or videos</p>
+          <p className="mb-3 text-xs text-[var(--gray-mid)]">For reliable uploads, keep the total selection below {formatMediaLimit(MAX_MEDIA_REQUEST_BYTES)}.</p>
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(0,89,255,0.28)] bg-blue-50/50 px-4 py-5 text-sm font-semibold text-[var(--primary)]">
             <Camera className="h-5 w-5" /> Add photos or videos
             <input
