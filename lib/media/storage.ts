@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { AppUser, MediaStorageProvider, ProjectRecord, UpdateMediaRecord, VendorRecord } from "@/types/domain";
+import { MAX_MEDIA_FILE_BYTES } from "@/lib/media/limits";
+import type { AppUser, MediaStorageProvider, PreparedMediaUpload, ProjectRecord, UpdateMediaRecord, VendorRecord } from "@/types/domain";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { hasSupabaseBackend } from "@/lib/env";
 
@@ -10,6 +11,12 @@ type MediaUploadInput = {
   sizeBytes?: number;
   caption?: string;
   data?: ArrayBuffer;
+};
+
+export type MediaUploadDescriptor = {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
 };
 
 type MediaUploadContext = {
@@ -154,4 +161,78 @@ export async function getMediaAccessUrl(media: UpdateMediaRecord, context: Media
 
 export async function resolveProjectFolder(project: ProjectRecord, vendor?: VendorRecord) {
   return storageService.resolveProjectFolder(project, vendor);
+}
+
+export async function prepareSignedMediaUploads(
+  files: MediaUploadDescriptor[],
+  context: MediaUploadContext
+): Promise<PreparedMediaUpload[]> {
+  if (!hasSupabaseBackend) throw new Error("Media storage is not configured.");
+  const supabase = createServiceRoleClient();
+  const projectFolder = await storageService.resolveProjectFolder(context.project, context.vendor);
+  const folderPath = `${projectFolder}/${context.actor.id}`;
+
+  return Promise.all(files.map(async (file) => {
+    const externalFileId = crypto.randomUUID();
+    const path = `${folderPath}/${externalFileId}-${sanitizeFilename(file.filename)}`;
+    const { data, error } = await supabase.storage.from(SUPABASE_MEDIA_BUCKET).createSignedUploadUrl(path);
+    if (error || !data?.token) throw new Error(`Could not prepare ${file.filename}: ${error?.message ?? "No upload token returned"}`);
+
+    return {
+      path,
+      token: data.token,
+      media: {
+        id: crypto.randomUUID(),
+        name: file.filename,
+        storageProvider: "supabase",
+        externalFileId,
+        externalFolderId: `${SUPABASE_MEDIA_BUCKET}/${folderPath}`,
+        externalUrl: `supabase://${SUPABASE_MEDIA_BUCKET}/${path}`,
+        mimeType: file.mimeType || inferMimeType(file.filename),
+        sizeBytes: file.sizeBytes,
+        uploadedByUserId: context.actor.id,
+        uploadedAt: new Date().toISOString()
+      }
+    };
+  }));
+}
+
+export async function verifySignedMediaUploads(media: UpdateMediaRecord[], context: MediaUploadContext) {
+  if (!hasSupabaseBackend) throw new Error("Media storage is not configured.");
+  const expectedProjectFolder = await storageService.resolveProjectFolder(context.project, context.vendor);
+  const expectedFolder = `${expectedProjectFolder}/${context.actor.id}`;
+  const expectedExternalFolder = `${SUPABASE_MEDIA_BUCKET}/${expectedFolder}`;
+  const supabase = createServiceRoleClient();
+
+  await Promise.all(media.map(async (item) => {
+    if (
+      item.uploadedByUserId !== context.actor.id ||
+      item.externalFolderId !== expectedExternalFolder ||
+      item.sizeBytes <= 0 ||
+      item.sizeBytes > MAX_MEDIA_FILE_BYTES ||
+      (!item.mimeType.startsWith("image/") && !item.mimeType.startsWith("video/"))
+    ) {
+      throw new Error(`Invalid uploaded media metadata for ${item.name}.`);
+    }
+
+    const expectedName = `${item.externalFileId}-${sanitizeFilename(item.name)}`;
+    const expectedPath = `${expectedFolder}/${expectedName}`;
+    if (mediaStoragePath(item) !== expectedPath) throw new Error(`Invalid storage path for ${item.name}.`);
+
+    const { data, error } = await supabase.storage.from(SUPABASE_MEDIA_BUCKET).list(expectedFolder, {
+      limit: 10,
+      search: expectedName
+    });
+    const stored = data?.find((entry) => entry.name === expectedName);
+    if (error || !stored) throw new Error(`${item.name} did not finish uploading. Please try again.`);
+    const storedSize = Number(stored.metadata?.size ?? item.sizeBytes);
+    if (storedSize > MAX_MEDIA_FILE_BYTES) throw new Error(`${item.name} is larger than the 25 MB limit.`);
+  }));
+
+  return media;
+}
+
+export async function removeUploadedMedia(media: UpdateMediaRecord[]) {
+  if (!hasSupabaseBackend || media.length === 0) return;
+  await createServiceRoleClient().storage.from(SUPABASE_MEDIA_BUCKET).remove(media.map(mediaStoragePath));
 }

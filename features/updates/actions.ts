@@ -4,15 +4,46 @@ import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
 import { createUpdate, deleteMediaAssetById, findMediaAsset, getDashboardData, recordApproval } from "@/lib/data/demo-store";
-import { MAX_MEDIA_FILE_BYTES, MAX_MEDIA_REQUEST_BYTES, formatMediaLimit } from "@/lib/media/limits";
-import { deleteMedia, uploadMedia } from "@/lib/media/storage";
-import type { ApprovalRecord } from "@/types/domain";
+import { MAX_MEDIA_FILES_PER_UPDATE, MAX_MEDIA_FILE_BYTES, formatMediaLimit } from "@/lib/media/limits";
+import { deleteMedia, prepareSignedMediaUploads, removeUploadedMedia, verifySignedMediaUploads, type MediaUploadDescriptor } from "@/lib/media/storage";
+import type { ApprovalRecord, UpdateMediaRecord } from "@/types/domain";
 
 export type CreateUpdateResult = { ok: true; message: string } | { ok: false; message: string };
 
-export async function createUpdateAction(formData: FormData): Promise<CreateUpdateResult> {
+export type PrepareMediaResult =
+  | { ok: true; uploads: Awaited<ReturnType<typeof prepareSignedMediaUploads>> }
+  | { ok: false; message: string };
+
+async function resolveUpdateScope(projectId: string, vendorId: string) {
+  const session = await requireSession();
+  const scopedData = await getDashboardData(session);
+  const project = scopedData.projects.find((entry) => entry.id === projectId);
+  const vendor = scopedData.vendors.find((entry) => entry.id === vendorId && project?.vendorIds.includes(entry.id));
+  const isInternallyManaged = Boolean(project && project.vendorIds.length === 0);
+  if (!project || (!vendor && !isInternallyManaged)) throw new Error("This project or CSR Associate is no longer available to your account.");
+  if (isInternallyManaged && session.role === "vendor") throw new Error("Only the Astral Foundation team can update an internally managed project.");
+  return { session, project, vendor };
+}
+
+export async function prepareMediaUploadsAction(
+  projectId: string,
+  vendorId: string,
+  files: MediaUploadDescriptor[]
+): Promise<PrepareMediaResult> {
   try {
-    const session = await requireSession();
+    if (files.length > MAX_MEDIA_FILES_PER_UPDATE) return { ok: false, message: `Select no more than ${MAX_MEDIA_FILES_PER_UPDATE} files per update.` };
+    const invalidFile = files.find((file) => file.sizeBytes <= 0 || file.sizeBytes > MAX_MEDIA_FILE_BYTES || (!file.mimeType.startsWith("image/") && !file.mimeType.startsWith("video/")));
+    if (invalidFile) return { ok: false, message: `${invalidFile.filename} must be a supported image or video no larger than ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)}.` };
+    const context = await resolveUpdateScope(projectId, vendorId);
+    return { ok: true, uploads: await prepareSignedMediaUploads(files, { actor: context.session, project: context.project, vendor: context.vendor }) };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Could not prepare media uploads." };
+  }
+}
+
+export async function createUpdateAction(formData: FormData): Promise<CreateUpdateResult> {
+  let uploadedMedia: UpdateMediaRecord[] = [];
+  try {
     const projectId = String(formData.get("projectId") ?? "");
     const vendorId = String(formData.get("vendorId") ?? "");
     const description = String(formData.get("description") ?? "").trim();
@@ -23,39 +54,11 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
       return { ok: false, message: "Progress must be between 0 and 100." };
     }
 
-    const scopedData = await getDashboardData(session);
-    const project = scopedData.projects.find((entry) => entry.id === projectId);
-    const vendor = scopedData.vendors.find((entry) => entry.id === vendorId && project?.vendorIds.includes(entry.id));
-    const isInternallyManaged = Boolean(project && project.vendorIds.length === 0);
-    if (!project || (!vendor && !isInternallyManaged)) {
-      return { ok: false, message: "This project or CSR Associate is no longer available to your account." };
-    }
-    if (isInternallyManaged && session.role === "vendor") {
-      return { ok: false, message: "Only the Astral Foundation team can update an internally managed project." };
-    }
-    const files = formData.getAll("mediaFiles").filter((entry): entry is File => entry instanceof File && entry.size > 0);
-    const invalidFile = files.find((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"));
-    if (invalidFile) return { ok: false, message: `${invalidFile.name} is not a supported image or video.` };
-    const oversizedFile = files.find((file) => file.size > MAX_MEDIA_FILE_BYTES);
-    if (oversizedFile) return { ok: false, message: `${oversizedFile.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} limit.` };
-    const totalMediaBytes = files.reduce((total, file) => total + file.size, 0);
-    if (totalMediaBytes > MAX_MEDIA_REQUEST_BYTES) {
-      return { ok: false, message: `The selected media is ${formatMediaLimit(totalMediaBytes)}. Keep each submission below ${formatMediaLimit(MAX_MEDIA_REQUEST_BYTES)}.` };
-    }
-
-    const media = await uploadMedia(
-      await Promise.all(files.map(async (file) => ({
-      filename: file.name,
-      mimeType: file.type,
-      sizeBytes: file.size,
-      data: await file.arrayBuffer()
-    }))),
-    {
-      actor: session,
-      project,
-      vendor
-    }
-  );
+    const { session, project, vendor } = await resolveUpdateScope(projectId, vendorId);
+    const rawMedia = String(formData.get("uploadedMedia") ?? "[]");
+    const parsedMedia = JSON.parse(rawMedia) as UpdateMediaRecord[];
+    if (!Array.isArray(parsedMedia) || parsedMedia.length > MAX_MEDIA_FILES_PER_UPDATE) throw new Error("Invalid media selection.");
+    uploadedMedia = await verifySignedMediaUploads(parsedMedia, { actor: session, project, vendor });
 
     await createUpdate({
     projectId,
@@ -78,7 +81,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     urgent: formData.get("urgent") === "true",
     documentationOnly: formData.get("documentationOnly") === "true",
     sensitiveContent: formData.get("sensitiveContent") === "true",
-    media
+    media: uploadedMedia
   });
 
   revalidatePath("/updates");
@@ -88,6 +91,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     return { ok: true, message: "Update submitted successfully." };
   } catch (error) {
     console.error("Update submission failed", error);
+    await removeUploadedMedia(uploadedMedia);
     return { ok: false, message: error instanceof Error ? error.message : "The update could not be submitted. Please try again." };
   }
 }

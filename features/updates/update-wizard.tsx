@@ -3,10 +3,11 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import { Camera, ChevronDown, Save, Send, X } from "lucide-react";
 
-import { createUpdateAction } from "@/features/updates/actions";
+import { createUpdateAction, prepareMediaUploadsAction } from "@/features/updates/actions";
 import { resolveAssignedProjectId } from "@/lib/domain/project-selection";
-import { MAX_MEDIA_FILE_BYTES, MAX_MEDIA_REQUEST_BYTES, formatMediaLimit } from "@/lib/media/limits";
-import type { ProjectRecord, VendorRecord } from "@/types/domain";
+import { MAX_MEDIA_FILES_PER_UPDATE, MAX_MEDIA_FILE_BYTES, formatMediaLimit } from "@/lib/media/limits";
+import { createClient } from "@/lib/supabase/client";
+import type { ProjectRecord, UpdateMediaRecord, VendorRecord } from "@/types/domain";
 
 type UpdateWizardProps = {
   projects: ProjectRecord[];
@@ -136,9 +137,8 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
       setStatus(`${oversizedFile.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} limit.`);
       return;
     }
-    const totalMediaBytes = mediaFiles.reduce((total, file) => total + file.size, 0);
-    if (totalMediaBytes > MAX_MEDIA_REQUEST_BYTES) {
-      setStatus(`The selected media is ${formatMediaLimit(totalMediaBytes)}. Keep each submission below ${formatMediaLimit(MAX_MEDIA_REQUEST_BYTES)} or upload fewer images at a time.`);
+    if (mediaFiles.length > MAX_MEDIA_FILES_PER_UPDATE) {
+      setStatus(`Select no more than ${MAX_MEDIA_FILES_PER_UPDATE} files per update.`);
       return;
     }
 
@@ -146,6 +146,40 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
     setStatus("Submitting your update...");
     startTransition(async () => {
       try {
+        let uploadedMedia: UpdateMediaRecord[] = [];
+        if (mediaFiles.length > 0) {
+          setStatus(`Preparing ${mediaFiles.length} media ${mediaFiles.length === 1 ? "file" : "files"}...`);
+          const prepared = await prepareMediaUploadsAction(
+            selectedProject.id,
+            selectedVendor?.id ?? "",
+            mediaFiles.map((file) => ({ filename: file.name, mimeType: file.type, sizeBytes: file.size }))
+          );
+          if (!prepared.ok) {
+            setStatus(prepared.message);
+            return;
+          }
+
+          const supabase = createClient();
+          const parallelUploads = 3;
+          for (let start = 0; start < prepared.uploads.length; start += parallelUploads) {
+            const batch = prepared.uploads.slice(start, start + parallelUploads);
+            const end = Math.min(start + batch.length, prepared.uploads.length);
+            setStatus(`Uploading files ${start + 1}–${end} of ${prepared.uploads.length}...`);
+            await Promise.all(batch.map(async (upload, batchIndex) => {
+              const file = mediaFiles[start + batchIndex];
+              const { error } = await supabase.storage
+                .from(process.env.NEXT_PUBLIC_SUPABASE_MEDIA_BUCKET || "project-media")
+                .uploadToSignedUrl(upload.path, upload.token, file, {
+                  contentType: file.type || upload.media.mimeType,
+                  upsert: false
+                });
+              if (error) throw new Error(`Could not upload ${upload.media.name}: ${error.message}`);
+            }));
+          }
+          uploadedMedia = prepared.uploads.map((upload) => upload.media);
+        }
+
+        setStatus("Saving your update...");
         const formData = new FormData();
         const fields = {
         projectId: selectedProject.id,
@@ -167,13 +201,13 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         sensitiveContent: String(sensitiveContent)
       };
         Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
-        mediaFiles.forEach((file) => formData.append("mediaFiles", file));
+        formData.set("uploadedMedia", JSON.stringify(uploadedMedia));
         const result = await createUpdateAction(formData);
         setStatus(result.message);
         if (result.ok) resetForm();
       } catch (error) {
         console.error("Update submission request failed", error);
-        setStatus("The update was not submitted. The image may be too large or the connection was interrupted. Try a smaller image or submit without media.");
+        setStatus(error instanceof Error ? error.message : "The update was not submitted. Check your connection and try again.");
       } finally {
         setIsSubmitting(false);
       }
@@ -242,7 +276,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
 
         <div>
           <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">Photos or videos</p>
-          <p className="mb-3 text-xs text-[var(--gray-mid)]">For reliable uploads, keep the total selection below {formatMediaLimit(MAX_MEDIA_REQUEST_BYTES)}.</p>
+          <p className="mb-3 text-xs text-[var(--gray-mid)]">Up to {MAX_MEDIA_FILES_PER_UPDATE} files, {formatMediaLimit(MAX_MEDIA_FILE_BYTES)} per file.</p>
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(0,89,255,0.28)] bg-blue-50/50 px-4 py-5 text-sm font-semibold text-[var(--primary)]">
             <Camera className="h-5 w-5" /> Add photos or videos
             <input
@@ -262,7 +296,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
             <div className="mt-3 flex flex-wrap gap-2">
               {mediaFiles.map((file, index) => (
                 <span key={`${file.name}-${file.lastModified}`} className="inline-flex items-center gap-2 rounded-full bg-[#f4f6fa] px-3 py-2 text-xs text-[var(--foreground)]">
-                  {file.name}
+                  {file.name} · {formatMediaLimit(file.size)}
                   <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setMediaFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><X className="h-3.5 w-3.5" /></button>
                 </span>
               ))}

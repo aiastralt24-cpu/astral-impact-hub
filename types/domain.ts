@@ -80,6 +80,12 @@ export type UpdateMediaRecord = {
   caption?: string;
 };
 
+export type PreparedMediaUpload = {
+  media: UpdateMediaRecord;
+  path: string;
+  token: string;
+};
+
 export type UpdateRecord = {
   id: string;
   projectId: string;
