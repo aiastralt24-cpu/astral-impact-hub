@@ -9,10 +9,17 @@ export function ProjectList({ projects, projectsWithUpdates = [] }: { projects: 
     <div className="flex items-center justify-between gap-4"><div><h2 id="project-list-heading" className="font-display text-2xl font-black tracking-[-0.03em]">All projects</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">{projects.length} {projects.length === 1 ? "project" : "projects"} in your workspace</p></div></div>
     <div className="grid gap-4 xl:grid-cols-2">
     {projects.map((project) => {
-      const completed = [project.projectBrief, project.location, project.startDate && project.endDate, project.internalOwnerId, project.vendorIds.length > 0 || project.vendorName === "Managed internally", projectsWithUpdates.includes(project.id)].filter(Boolean).length;
-      const setupProgress = Math.round((completed / 6) * 100);
+      const hasUpdate = projectsWithUpdates.includes(project.id);
+      const missingSetup = [
+        !project.projectBrief && "project overview",
+        !project.location && "location",
+        !(project.startDate && project.endDate) && "project dates",
+        !project.internalOwnerId && "project manager",
+        !(project.vendorIds.length > 0 || project.vendorName === "Managed internally") && "CSR Associate",
+        !hasUpdate && "first update"
+      ].filter(Boolean) as string[];
       const healthTone = project.healthScore < 45 ? "rose" : project.healthScore < 70 ? "amber" : "emerald";
-      const healthLabel = project.healthScore < 45 ? "Action needed" : project.healthScore < 70 ? "Needs follow-up" : "On track";
+      const reportingLabel = !hasUpdate ? "First update needed" : project.healthScore < 45 ? "Reporting needs attention" : project.healthScore < 70 ? "Reporting follow-up" : "Reporting on track";
       const statusLabel = project.status.replaceAll("_", " ");
       return (
       <article key={project.id} className="group relative overflow-hidden rounded-[24px] border border-[var(--border)] bg-white shadow-[0_12px_32px_rgba(17,24,39,0.055)] transition duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-[0_18px_42px_rgba(17,24,39,0.09)]">
@@ -21,7 +28,7 @@ export function ProjectList({ projects, projectsWithUpdates = [] }: { projects: 
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--primary)]">{project.category || "Project"}</span>
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold capitalize tracking-[0.08em] text-slate-600">{statusLabel}</span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${healthTone === "rose" ? "bg-rose-50 text-rose-700" : healthTone === "amber" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{healthTone === "emerald" ? <CheckCircle2 className="h-3 w-3" /> : <CircleAlert className="h-3 w-3" />}{healthLabel}</span>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${healthTone === "rose" ? "bg-rose-50 text-rose-700" : healthTone === "amber" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{healthTone === "emerald" ? <CheckCircle2 className="h-3 w-3" /> : <CircleAlert className="h-3 w-3" />}{reportingLabel}</span>
           </div>
           <div className="mt-4 flex items-start justify-between gap-4">
             <div className="min-w-0"><h3 className="font-display text-2xl font-black tracking-[-0.035em] text-[var(--foreground)]">{project.name}</h3><p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">{project.projectBrief || "Project overview has not been added yet."}</p></div>
@@ -32,10 +39,7 @@ export function ProjectList({ projects, projectsWithUpdates = [] }: { projects: 
             <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5"><Building2 className="h-4 w-4 shrink-0" /><span className="truncate">{project.vendorName || "Managed internally"}</span></div>
             <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5"><CalendarDays className="h-4 w-4 shrink-0" /><span className="truncate">{project.startDate && project.endDate ? `${project.startDate} – ${project.endDate}` : "Dates not added"}</span></div>
           </div>
-          <div className="mt-5 grid gap-4 border-t border-[var(--border)] pt-4 sm:grid-cols-2">
-            <div><div className="flex items-center justify-between gap-3 text-xs"><span className="font-medium text-[var(--gray-mid)]">Project health</span><span className="font-semibold text-[var(--foreground)]">{project.healthScore}/100</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${healthTone === "rose" ? "bg-rose-500" : healthTone === "amber" ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${project.healthScore}%` }} /></div></div>
-            <div><div className="flex items-center justify-between gap-3 text-xs"><span className="font-medium text-[var(--gray-mid)]">Setup readiness</span><span className="font-semibold text-[var(--foreground)]">{completed} of 6</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[var(--primary)]" style={{ width: `${setupProgress}%` }} /></div></div>
-          </div>
+          {missingSetup.length > 0 ? <div className="mt-4 flex items-center gap-2 border-t border-[var(--border)] pt-4 text-xs text-amber-800"><CircleAlert className="h-4 w-4 shrink-0" /><span><span className="font-semibold">Setup incomplete:</span> Add {missingSetup[0]}{missingSetup.length > 1 ? ` and ${missingSetup.length - 1} more` : ""}.</span></div> : null}
         </div>
       </article>
     )})}
