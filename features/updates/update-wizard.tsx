@@ -5,6 +5,7 @@ import { Camera, ChevronDown, Save, Send, X } from "lucide-react";
 
 import { createUpdateAction, prepareMediaUploadsAction } from "@/features/updates/actions";
 import { resolveAssignedProjectId } from "@/lib/domain/project-selection";
+import { validateBeneficiaryCount } from "@/lib/domain/update-validation";
 import { MAX_MEDIA_FILES_PER_UPDATE, MAX_MEDIA_FILE_BYTES, formatMediaLimit } from "@/lib/media/limits";
 import { createClient } from "@/lib/supabase/client";
 import type { ProjectRecord, UpdateMediaRecord, VendorRecord } from "@/types/domain";
@@ -130,6 +131,11 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
     }
     if (!description.trim()) {
       setStatus("Please describe what happened.");
+      return;
+    }
+    const beneficiaryCountError = validateBeneficiaryCount(reachCount);
+    if (beneficiaryCountError) {
+      setStatus(beneficiaryCountError);
       return;
     }
     const oversizedFile = mediaFiles.find((file) => file.size > MAX_MEDIA_FILE_BYTES);
@@ -267,7 +273,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         <div>
           <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">People or outcomes reached</p>
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
-            <input value={reachCount} onChange={(event) => setReachCount(event.target.value)} type="number" min="0" placeholder="Number" className="h-12 rounded-xl px-4" />
+            <input value={reachCount} onChange={(event) => setReachCount(event.target.value)} type="number" min="0" step="1" inputMode="numeric" placeholder="Whole number" className="h-12 rounded-xl px-4" />
             <select value={reachType} onChange={(event) => setReachType(event.target.value)} className="h-12 rounded-xl px-4">
               <option>People</option><option>Animals</option><option>Hectares of land</option><option>Litres of water</option><option>Other</option>
             </select>

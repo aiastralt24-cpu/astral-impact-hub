@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
 import { createUpdate, deleteMediaAssetById, findMediaAsset, getDashboardData, recordApproval } from "@/lib/data/demo-store";
+import { validateBeneficiaryCount } from "@/lib/domain/update-validation";
 import { MAX_MEDIA_FILES_PER_UPDATE, MAX_MEDIA_FILE_BYTES, formatMediaLimit } from "@/lib/media/limits";
 import { deleteMedia, prepareSignedMediaUploads, removeUploadedMedia, verifySignedMediaUploads, type MediaUploadDescriptor } from "@/lib/media/storage";
 import type { ApprovalRecord, UpdateMediaRecord } from "@/types/domain";
@@ -48,11 +49,14 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     const vendorId = String(formData.get("vendorId") ?? "");
     const description = String(formData.get("description") ?? "").trim();
     const progressPercent = Number(formData.get("progressPercent") ?? 0);
+    const beneficiariesCountValue = String(formData.get("beneficiariesCount") ?? "");
     if (!projectId) return { ok: false, message: "Select a valid project." };
     if (!description) return { ok: false, message: "Please describe what happened during the activity." };
     if (!Number.isFinite(progressPercent) || progressPercent < 0 || progressPercent > 100) {
       return { ok: false, message: "Progress must be between 0 and 100." };
     }
+    const beneficiaryCountError = validateBeneficiaryCount(beneficiariesCountValue);
+    if (beneficiaryCountError) return { ok: false, message: beneficiaryCountError };
 
     const { session, project, vendor } = await resolveUpdateScope(projectId, vendorId);
     const rawMedia = String(formData.get("uploadedMedia") ?? "[]");
@@ -68,7 +72,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     submittedByUserId: session.id,
     happenedAt: String(formData.get("happenedAt") ?? new Date().toISOString().slice(0, 10)),
     description,
-    beneficiariesCount: formData.get("beneficiariesCount") ? Number(formData.get("beneficiariesCount")) : undefined,
+    beneficiariesCount: beneficiariesCountValue ? Number(beneficiariesCountValue) : undefined,
     beneficiaryType: String(formData.get("beneficiaryType") ?? ""),
     progressPercent,
     workDuration: String(formData.get("workDuration") ?? ""),
@@ -92,7 +96,12 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
   } catch (error) {
     console.error("Update submission failed", error);
     await removeUploadedMedia(uploadedMedia);
-    return { ok: false, message: error instanceof Error ? error.message : "The update could not be submitted. Please try again." };
+    const message = error instanceof Error
+      ? error.message
+      : typeof error === "object" && error && "message" in error && typeof error.message === "string"
+        ? error.message
+        : "The update could not be submitted. Please try again.";
+    return { ok: false, message };
   }
 }
 
