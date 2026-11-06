@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { LayoutDashboard, Menu, PanelLeftClose, PanelLeftOpen, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -23,7 +23,13 @@ function getProfileLines(session: AppUser) {
 
 export function Sidebar({ session }: { session: AppUser }) {
   const pathname = usePathname();
-  const availableNav = navItems.filter((item) => item.roles.includes(session.role));
+  const availableNav = navItems
+    .filter((item) => item.roles.includes(session.role))
+    .map((item) =>
+      session.role === "vendor" && item.href === "/vendors"
+        ? { ...item, href: "/profile" as const, label: "My Profile", icon: UserRound }
+        : item
+    );
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const profile = getProfileLines(session);
@@ -102,10 +108,10 @@ export function Sidebar({ session }: { session: AppUser }) {
         </div>
 
         {!collapsed ? (
-          <div className="mb-4 rounded-[22px] bg-white/72 p-3.5 text-sm ring-1 ring-[rgba(18,26,39,0.08)]">
+          <Link href={session.role === "vendor" ? "/profile" : "/dashboard"} className="mb-4 block rounded-[22px] bg-white/72 p-3.5 text-sm ring-1 ring-[rgba(18,26,39,0.08)] transition hover:bg-white">
             <p className="font-medium text-[var(--foreground)]">{profile.title}</p>
             {profile.subtitle ? <p className="text-[var(--gray-mid)]">{profile.subtitle}</p> : null}
-          </div>
+          </Link>
         ) : null}
 
         {!collapsed ? <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--gray-mid)]">Workspace</p> : null}

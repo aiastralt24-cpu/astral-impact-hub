@@ -7,13 +7,16 @@ import Link from "next/link";
 
 export default async function VendorsPage() {
   const session = await requireSession();
+  if (session.role === "vendor") {
+    redirect("/profile");
+  }
   if (!canAccessRoute(session.role, "/vendors")) {
     redirect("/dashboard");
   }
   const data = await getDashboardData(session);
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3"><h1 className="font-display text-3xl font-black">CSR Associates</h1>{session.role !== "vendor" ? <Link href="/vendors/new" className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white">Add CSR Associate</Link> : null}</div>
+      <div className="flex items-center justify-between gap-3"><h1 className="font-display text-3xl font-black">CSR Associates</h1><Link href="/vendors/new" className="rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white">Add CSR Associate</Link></div>
       <VendorManagement vendors={data.vendors} session={session} showCreate={false} />
     </div>
   );

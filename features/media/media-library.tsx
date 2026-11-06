@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, ExternalLink, FileImage, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Download, ExternalLink, FileImage, MoreHorizontal, Search } from "lucide-react";
 
-import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
-import { deleteMediaAction } from "@/features/updates/actions";
+import { DeleteMediaButton } from "@/features/media/delete-media-button";
 
 type MediaItem = { id: string; name: string; caption?: string; accessUrl: string | null; updateStatus: string; updateDate: string; vendorName: string; mimeType: string; sizeBytes: number };
 type MediaProject = { project: { id: string; name: string; vendorName: string; location: string }; items: MediaItem[] };
@@ -66,7 +65,7 @@ export function MediaLibrary({ entries }: { entries: MediaProject[] }) {
         <a href={item.accessUrl ?? undefined} target="_blank" rel="noreferrer" className={`relative block overflow-hidden ${item.accessUrl ? "cursor-zoom-in" : "cursor-default"}`} aria-label={item.accessUrl ? `Open ${item.name}` : `${item.name}, preview unavailable`}><MediaPreview item={item} /><span className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ring-1 ${statusStyles[item.updateStatus] ?? "bg-white/90 text-slate-700 ring-slate-900/10"}`}>{item.updateStatus.replaceAll("_", " ")}</span></a>
         <div className="p-4"><p className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-[var(--foreground)]" title={item.name}>{item.name}</p><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-[var(--gray-mid)]">{item.caption || "No caption added"}</p><div className="mt-3 flex items-center justify-between gap-3 text-xs text-[var(--gray-mid)]"><span>{formatFileSize(item.sizeBytes)}</span><span>{formatDate(item.updateDate)}</span></div>
           <div className="mt-4 flex items-center gap-2 border-t border-[var(--border)] pt-3">{item.accessUrl ? <><a href={item.accessUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 text-xs font-semibold text-white"><ExternalLink className="h-3.5 w-3.5" />View</a><a href={item.accessUrl} download={item.name} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border)] bg-white px-3 text-xs font-semibold text-[var(--foreground)]"><Download className="h-3.5 w-3.5" />Download</a></> : <span className="text-xs font-medium text-amber-700">File unavailable</span>}
-            <details className="relative ml-auto"><summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-[var(--border)] text-[var(--gray-mid)] transition-colors hover:bg-[#f4f6fa] hover:text-[var(--foreground)]" aria-label={`More actions for ${item.name}`}><MoreHorizontal className="h-4 w-4" /></summary><div className="absolute bottom-11 right-0 z-10 w-44 rounded-xl border border-[var(--border)] bg-white p-1.5 shadow-[0_16px_40px_rgba(17,24,39,0.16)]"><form action={deleteMediaAction}><input type="hidden" name="mediaAssetId" value={item.id} /><ConfirmSubmitButton confirmMessage={`Delete ${item.name}? This cannot be undone.`} pendingLabel="Deleting..." className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Delete media</ConfirmSubmitButton></form></div></details>
+            <details className="relative ml-auto"><summary className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-[var(--border)] text-[var(--gray-mid)] transition-colors hover:bg-[#f4f6fa] hover:text-[var(--foreground)]" aria-label={`More actions for ${item.name}`}><MoreHorizontal className="h-4 w-4" /></summary><div className="absolute bottom-11 right-0 z-10 w-44 rounded-xl border border-[var(--border)] bg-white p-1.5 shadow-[0_16px_40px_rgba(17,24,39,0.16)]"><DeleteMediaButton mediaAssetId={item.id} fileName={item.name} /></div></details>
           </div>
         </div>
       </article>)}</div>

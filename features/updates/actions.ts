@@ -122,37 +122,39 @@ export async function approvalAction(formData: FormData) {
   revalidatePath("/analytics");
 }
 
-export async function deleteMediaAction(formData: FormData) {
-  const session = await requireSession();
-  const mediaAssetId = String(formData.get("mediaAssetId") ?? "");
-  if (!mediaAssetId) {
-    return;
+export type DeleteMediaResult = { ok: true; message: string } | { ok: false; message: string };
+
+export async function deleteMediaAction(formData: FormData): Promise<DeleteMediaResult> {
+  try {
+    const session = await requireSession();
+    const mediaAssetId = String(formData.get("mediaAssetId") ?? "");
+    if (!mediaAssetId) return { ok: false, message: "The media file could not be identified." };
+
+    const mediaEntry = await findMediaAsset(mediaAssetId);
+    if (!mediaEntry) return { ok: false, message: "This media file no longer exists. Refresh the page and try again." };
+
+    const scopedData = await getDashboardData(session);
+    const canAccessProject = scopedData.projects.some((project) => project.id === mediaEntry.update.projectId);
+    const canAccessVendor = !mediaEntry.update.vendorId || scopedData.vendors.some((vendor) => vendor.id === mediaEntry.update.vendorId);
+    const canDelete =
+      session.isSuperAdmin ||
+      session.role === "admin" ||
+      ((session.role === "vendor" || session.role === "project_manager" || session.role === "content_team" || session.role === "leadership") &&
+        canAccessProject &&
+        canAccessVendor);
+
+    if (!canDelete) return { ok: false, message: "You do not have permission to delete this media file." };
+
+    await deleteMedia(mediaEntry.media, { actor: session });
+    await deleteMediaAssetById(mediaAssetId);
+
+    revalidatePath("/media");
+    revalidatePath("/updates");
+    revalidatePath("/dashboard");
+    revalidatePath("/analytics");
+    return { ok: true, message: "Media deleted successfully." };
+  } catch (error) {
+    console.error("Media deletion failed", error);
+    return { ok: false, message: "The media file could not be deleted. Please try again." };
   }
-
-  const mediaEntry = await findMediaAsset(mediaAssetId);
-  if (!mediaEntry) {
-    return;
-  }
-
-  const scopedData = await getDashboardData(session);
-  const canAccessProject = scopedData.projects.some((project) => project.id === mediaEntry.update.projectId);
-  const canAccessVendor = !mediaEntry.update.vendorId || scopedData.vendors.some((vendor) => vendor.id === mediaEntry.update.vendorId);
-  const canDelete =
-    session.isSuperAdmin ||
-    session.role === "admin" ||
-    ((session.role === "vendor" || session.role === "project_manager" || session.role === "content_team" || session.role === "leadership") &&
-      canAccessProject &&
-      canAccessVendor);
-
-  if (!canDelete) {
-    return;
-  }
-
-  await deleteMedia(mediaEntry.media, { actor: session });
-  await deleteMediaAssetById(mediaAssetId);
-
-  revalidatePath("/media");
-  revalidatePath("/updates");
-  revalidatePath("/dashboard");
-  revalidatePath("/analytics");
 }
