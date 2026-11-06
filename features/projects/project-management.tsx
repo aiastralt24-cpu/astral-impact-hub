@@ -1,14 +1,10 @@
-import { createProjectAction, deleteProjectAction, updateProjectAction } from "@/features/projects/actions";
+import { deleteProjectAction, updateProjectAction } from "@/features/projects/actions";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { canCreateProject, canManageProject } from "@/lib/auth/project-permissions";
 import type { AppUser, ProjectRecord, VendorRecord } from "@/types/domain";
 import { ProjectManagementChoice } from "@/features/projects/project-management-choice";
-import type { ReactNode } from "react";
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
-  return <label className="grid gap-1.5 text-sm font-medium text-[var(--foreground)]"><span>{label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</span>{children}</label>;
-}
+import { CreateProjectForm } from "@/features/projects/create-project-form";
 
 type ProjectManagementProps = {
   projects: ProjectRecord[];
@@ -23,8 +19,8 @@ export function ProjectManagement({ projects, vendors, managers, session, showCr
   const canCreate = canCreateProject(session);
 
   return (
-    <div className={canCreate && projects.length > 0 ? "grid gap-6 xl:grid-cols-[1.4fr_0.9fr]" : "grid max-w-2xl gap-6"}>
-      <div className="space-y-4">
+    <div className={canCreate && projects.length > 0 ? "grid gap-6 xl:grid-cols-[1.4fr_0.9fr]" : "grid w-full gap-6"}>
+      <div className={projects.length ? "space-y-4" : "hidden"}>
         {projects.map((project) => (
           <div key={project.id} className="glass-card rounded-[30px] p-5">
             {project.requireAdminApproval ? (
@@ -126,50 +122,7 @@ export function ProjectManagement({ projects, vendors, managers, session, showCr
         ))}
       </div>
 
-      {canCreate && showCreate ? <form action={createProjectAction} className="glass-card rounded-[30px] p-6">
-        <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Create project</p>
-        <div className="mt-4 grid gap-4">
-          <Field label="Project name" required><input name="name" placeholder="e.g. School Water Programme" required className="h-12 rounded-2xl px-4" /></Field>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Project area" required><input name="category" placeholder="e.g. Education" required className="h-12 rounded-2xl px-4" /></Field>
-            <Field label="Focus area"><input name="subCategory" placeholder="e.g. School infrastructure" className="h-12 rounded-2xl px-4" /></Field>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="State" required><input name="state" placeholder="State" required className="h-12 rounded-2xl px-4" /></Field>
-            <Field label="District" required><input name="district" placeholder="District" required className="h-12 rounded-2xl px-4" /></Field>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Start date" required><input name="startDate" type="date" required className="h-12 rounded-2xl px-4" /></Field>
-            <Field label="End date" required><input name="endDate" type="date" required className="h-12 rounded-2xl px-4" /></Field>
-          </div>
-          <Field label="Project manager" required><select name="internalOwnerId" required className="h-12 rounded-2xl px-4">
-            {managers.map((manager) => (
-              <option value={manager.id} key={manager.id}>
-                {manager.fullName}
-              </option>
-            ))}
-          </select></Field>
-          <ProjectManagementChoice vendors={vendors} defaultVendorIds={defaultVendorIds} />
-          <Field label="Project overview" required><textarea name="projectBrief" placeholder="What will this project do, and for whom?" required className="min-h-28 rounded-3xl px-4 py-3" /></Field>
-          <details className="rounded-2xl border border-[var(--border)] bg-white p-4"><summary className="cursor-pointer text-sm font-semibold text-[var(--primary)]">Add optional details</summary><div className="mt-4 grid gap-4"><Field label="Project highlights"><input name="strategicTags" placeholder="Separate items with commas" className="h-12 rounded-2xl px-4" /></Field><Field label="Impact themes"><input name="emotionalTags" placeholder="Separate items with commas" className="h-12 rounded-2xl px-4" /></Field><Field label="People to be reached"><input name="beneficiaryTarget" type="number" min="0" placeholder="0" className="h-12 rounded-2xl px-4" /></Field></div></details>
-          <Field label="Project status" required><select name="status" className="h-12 rounded-2xl px-4">
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="on_hold">On Hold</option>
-          </select></Field>
-          <label className="flex items-center gap-3 text-sm text-[var(--gray-mid)]">
-            <input type="checkbox" name="requireAdminApproval" />
-            Require admin approval
-          </label>
-          <ConfirmSubmitButton
-            confirmMessage="Create this project?"
-            pendingLabel="Creating..."
-            className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-medium text-white shadow-[0_12px_24px_rgba(93,99,255,0.18)]"
-          >
-            Create project
-          </ConfirmSubmitButton>
-        </div>
-      </form> : null}
+      {canCreate && showCreate ? <CreateProjectForm vendors={vendors} managers={managers} defaultVendorIds={defaultVendorIds} /> : null}
     </div>
   );
 }

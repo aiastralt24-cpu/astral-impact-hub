@@ -17,10 +17,10 @@ export function ProjectManagementChoice({ vendors, defaultVendorIds }: ProjectMa
   const [selectedVendorIds, setSelectedVendorIds] = useState(initialVendorIds);
 
   return (
-    <fieldset className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)]">
+    <fieldset className="min-w-0 rounded-xl border border-[var(--border)] bg-slate-50/70 p-4">
       <legend className="px-1 text-sm font-semibold text-[var(--foreground)]">Project managed by</legend>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <label className={`cursor-pointer rounded-2xl border p-3 text-sm ${managementType === "csr" ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]" : "border-[var(--border)] bg-white text-[var(--gray-mid)]"}`}>
+        <label className={`cursor-pointer flex items-center rounded-xl border p-3 text-sm transition-colors ${managementType === "csr" ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]" : "border-[var(--border)] bg-white text-[var(--gray-mid)]"}`}>
           <input
             type="radio"
             name="managementType"
@@ -31,7 +31,7 @@ export function ProjectManagementChoice({ vendors, defaultVendorIds }: ProjectMa
           />
           CSR Associate
         </label>
-        <label className={`cursor-pointer rounded-2xl border p-3 text-sm ${managementType === "internal" ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]" : "border-[var(--border)] bg-white text-[var(--gray-mid)]"}`}>
+        <label className={`cursor-pointer flex items-center rounded-xl border p-3 text-sm transition-colors ${managementType === "internal" ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]" : "border-[var(--border)] bg-white text-[var(--gray-mid)]"}`}>
           <input
             type="radio"
             name="managementType"
@@ -45,14 +45,14 @@ export function ProjectManagementChoice({ vendors, defaultVendorIds }: ProjectMa
       </div>
 
       {managementType === "csr" ? (
-        <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-[var(--border)]">
+        <div className="mt-4 rounded-xl border border-[var(--border)] bg-white p-4">
           <p className="mb-1 text-sm font-medium text-[var(--foreground)]">Select CSR Associate</p>
           <p className="mb-3 text-xs text-[var(--gray-mid)]">Choose at least one associate before saving.</p>
           {vendors.length > 0 ? (
-            <div className="grid gap-2 text-sm">
+            <div className="grid max-h-60 gap-2 overflow-y-auto text-sm">
               <input className="sr-only" value={selectedVendorIds.join(",")} onChange={() => undefined} required aria-hidden="true" tabIndex={-1} />
               {vendors.map((vendor) => (
-                <label key={vendor.id} className="flex items-center gap-3 text-[var(--gray-mid)]">
+                <label key={vendor.id} className="flex cursor-pointer items-center gap-3 rounded-lg p-2 text-[var(--gray-mid)] hover:bg-slate-50">
                   <input
                     type="checkbox"
                     name="vendorIds"
