@@ -2,6 +2,7 @@ import { approvalAction } from "@/features/updates/actions";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, ApprovalComment, UpdateRecord } from "@/types/domain";
+import { CalendarDays, Check, ImageIcon, RotateCcw, X } from "lucide-react";
 
 type ApprovalQueueProps = {
   updates: UpdateRecord[];
@@ -70,38 +71,34 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
   const actionable = visibleUpdates.filter((update) => ["pending", "in_review", "revision_requested"].includes(update.status));
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
-      <div className="flex items-start justify-between gap-4">
-        <div className="px-5 py-4 sm:px-6">
-          <h2 className="font-display text-xl font-bold text-[var(--foreground)]">Updates to review</h2>
-          <p className="mt-1 text-sm text-[var(--gray-mid)]">Check each update and choose what should happen next.</p>
+    <section className="overflow-hidden rounded-[24px] border border-[var(--border)] bg-white shadow-[0_12px_34px_rgba(17,24,39,0.05)]">
+      <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4 sm:px-6">
+        <div>
+          <h2 className="font-display text-xl font-black text-[var(--foreground)]">Review queue</h2>
+          <p className="mt-1 text-sm text-[var(--gray-mid)]">Approve submissions or return them with a clear note.</p>
         </div>
-        <div className="m-4 rounded-xl bg-[var(--primary-light)] px-4 py-2 text-center">
-          <p className="text-2xl font-bold text-[var(--primary)]">{actionable.length}</p>
-          <p className="text-xs text-[var(--gray-mid)]">to review</p>
-        </div>
+        <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-[var(--primary)] px-3 text-sm font-bold text-white">{actionable.length}</span>
       </div>
 
-      <div className="border-t border-[var(--border)]">
+      <div className="divide-y divide-[var(--border)]">
         {actionable.length ? (
           actionable.map((update) => (
-            <article key={update.id} className="border-b border-[var(--border)] p-5 last:border-b-0 sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+            <article key={update.id} className="p-5 sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <Badge variant={badgeMap[update.status]}>{update.status === "revision_requested" ? "Changes requested" : "Needs review"}</Badge>
-                  <h3 className="mt-3 font-display text-xl font-bold text-[var(--foreground)]">{update.projectName}</h3>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-wide text-[var(--gray-mid)]">What happened</p>
-                  <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--foreground)]">{update.description || "No description was provided."}</p>
+                  <h3 className="mt-3 font-display text-xl font-black text-[var(--foreground)]">{update.projectName}</h3>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--foreground)]">{update.description || "No description was provided."}</p>
                 </div>
-                <div className="text-sm text-[var(--gray-mid)] sm:text-right">
-                  <p>Submitted by <strong className="text-[var(--foreground)]">{update.vendorName === "Unknown CSR Associate" ? "Foundation team" : update.vendorName}</strong></p>
-                  <p className="mt-1">Activity date: {update.happenedAt}</p>
+                <div className="text-xs text-[var(--gray-mid)] sm:text-right">
+                  <p className="font-semibold text-[var(--foreground)]">{update.vendorName === "Unknown CSR Associate" ? "Foundation team" : update.vendorName}</p>
+                  <p className="mt-1 inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{update.happenedAt}</p>
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 rounded-xl bg-[#f8f9fc] px-4 py-3 text-sm">
-                <span><span className="text-[var(--gray-mid)]">Project progress:</span> <strong>{update.progressPercent}%</strong></span>
-                <span><span className="text-[var(--gray-mid)]">Photos/videos:</span> <strong>{update.media.length}</strong></span>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-lg bg-slate-100 px-3 py-2"><span className="text-[var(--gray-mid)]">Progress</span> <strong className="ml-1">{update.progressPercent}%</strong></span>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2"><ImageIcon className="h-3.5 w-3.5 text-[var(--gray-mid)]" /><strong>{update.media.length}</strong> files</span>
               </div>
 
               {commentsByUpdate[update.id]?.length ? (
@@ -117,42 +114,42 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                 </div>
               ) : null}
 
-              <form action={approvalAction} className="mt-4 space-y-3">
+              <form action={approvalAction} className="mt-5 space-y-3">
                   <input type="hidden" name="updateId" value={update.id} />
                   <input type="hidden" name="stage" value={session.role === "admin" ? "admin" : "manager"} />
-                  <label className="block text-sm font-medium text-[var(--foreground)]">Note for the team <span className="font-normal text-[var(--gray-mid)]">(required when asking for changes or rejecting)</span><input
+                  <label className="block text-sm font-semibold text-[var(--foreground)]">Review note <span className="font-normal text-[var(--gray-mid)]">— required for changes or rejection</span><input
                     type="text"
                     name="comment"
                     placeholder="Explain clearly what needs to change"
                     className="mt-2 h-11 w-full rounded-xl px-4 text-sm"
                   /></label>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                     <ConfirmSubmitButton
                       name="action"
                       value="approve"
                       confirmMessage={`Approve the update for ${update.projectName}?`}
                       pendingLabel="Approving..."
-                      className="rounded-full border border-emerald-500/16 bg-emerald-500/10 px-4 py-2.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-500/16"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                     >
-                      Approve
+                      <Check className="h-4 w-4" />Approve
                     </ConfirmSubmitButton>
                     <ConfirmSubmitButton
                       name="action"
                       value="request_revision"
                       confirmMessage={`Request a revision for ${update.projectName}?`}
                       pendingLabel="Sending..."
-                      className="rounded-full border border-amber-500/16 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-500/16"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100"
                     >
-                      Ask for changes
+                      <RotateCcw className="h-4 w-4" />Ask for changes
                     </ConfirmSubmitButton>
                     <ConfirmSubmitButton
                       name="action"
                       value="reject"
                       confirmMessage={`Reject the update for ${update.projectName}?`}
                       pendingLabel="Rejecting..."
-                      className="rounded-full border border-rose-500/16 bg-rose-500/10 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-500/16"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-50"
                     >
-                      Reject
+                      <X className="h-4 w-4" />Reject
                     </ConfirmSubmitButton>
                   </div>
               </form>

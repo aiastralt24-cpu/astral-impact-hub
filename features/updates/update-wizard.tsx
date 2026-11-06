@@ -226,16 +226,15 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
-      <div className="border-b border-[var(--border)] px-5 py-4 sm:px-6">
-        <h2 className="font-display text-xl font-bold text-[var(--foreground)]">Quick update</h2>
-        <p className="mt-1 text-sm text-[var(--gray-mid)]">Add the essential details. Everything else is optional.</p>
+    <section className="overflow-hidden rounded-[24px] border border-[var(--border)] bg-white shadow-[0_12px_34px_rgba(17,24,39,0.05)]">
+      <div className="border-b border-[var(--border)] px-5 py-5 sm:px-6">
+        <div className="flex items-center justify-between gap-4"><div><h2 className="font-display text-xl font-black text-[var(--foreground)]">New update</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">Complete the essentials, then add supporting detail if needed.</p></div><span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-[var(--primary)]">Draft</span></div>
       </div>
 
-      <div className="space-y-6 p-5 sm:p-6">
+      <div className="space-y-5 p-5 sm:p-6">
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-[var(--foreground)]">Project</span>
-          <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="h-12 w-full rounded-xl px-4">
+          <select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="h-12 w-full rounded-xl px-4 font-medium">
             {projects.map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
           </select>
           <span className="mt-2 block text-xs text-[var(--gray-mid)]">
@@ -249,7 +248,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             maxLength={300}
-            className="min-h-32 w-full rounded-xl px-4 py-3"
+            className="min-h-28 w-full rounded-xl px-4 py-3"
             placeholder="Example: The team repaired two water points and cleared the surrounding area."
           />
           <span className="mt-1 block text-right text-xs text-[var(--gray-mid)]">{description.length}/300</span>
@@ -267,7 +266,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
                 key={option.label}
                 type="button"
                 onClick={() => setProgressPercent(option.value)}
-                className={`rounded-xl border px-3 py-3 text-sm font-medium ${progressPercent === option.value ? "border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]" : "border-[var(--border)] bg-white text-[var(--gray-mid)]"}`}
+                className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${progressPercent === option.value ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0_6px_16px_rgba(0,89,255,0.18)]" : "border-[var(--border)] bg-white text-[var(--gray-mid)] hover:bg-slate-50"}`}
               >
                 {option.label}
               </button>
@@ -288,7 +287,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         <div>
           <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">Photos or videos</p>
           <p className="mb-3 text-xs text-[var(--gray-mid)]">Up to {MAX_MEDIA_FILES_PER_UPDATE} files, {formatMediaLimit(MAX_MEDIA_FILE_BYTES)} per file.</p>
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(0,89,255,0.28)] bg-blue-50/50 px-4 py-5 text-sm font-semibold text-[var(--primary)]">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(0,89,255,0.28)] bg-blue-50/50 px-4 py-4 text-sm font-semibold text-[var(--primary)] transition hover:bg-blue-50">
             <Camera className="h-5 w-5" /> Add photos or videos
             <input
               type="file"
@@ -371,10 +370,10 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         ) : null}
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button type="button" onClick={() => saveDraft(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)]">
+          <button type="button" onClick={() => saveDraft(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-slate-50">
             <Save className="h-4 w-4" /> Save for later
           </button>
-          <button type="button" disabled={isSubmitting} onClick={submitUpdate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
+          <button type="button" disabled={isSubmitting} onClick={submitUpdate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,89,255,0.2)] disabled:opacity-60">
             <Send className="h-4 w-4" /> {isSubmitting ? "Submitting..." : "Submit update"}
           </button>
         </div>
