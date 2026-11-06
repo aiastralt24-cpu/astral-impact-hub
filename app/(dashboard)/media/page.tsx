@@ -32,7 +32,7 @@ export default async function MediaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
+      <div className="space-y-1 pl-16 lg:pl-0">
         <p className="text-sm uppercase tracking-[0.26em] text-[var(--accent-blue)]">Media library</p>
         <h1 className="font-display text-3xl font-black">Project media</h1>
         <p className="text-sm text-[var(--gray-mid)]">
