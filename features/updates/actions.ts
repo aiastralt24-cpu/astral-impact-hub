@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
 import { createUpdate, deleteMediaAssetById, findMediaAsset, getDashboardData, recordApproval } from "@/lib/data/demo-store";
-import { validateBeneficiaryCount } from "@/lib/domain/update-validation";
+import { getUpdateErrorMessage, validateBeneficiaryCount } from "@/lib/domain/update-validation";
 import { MAX_MEDIA_FILES_PER_UPDATE, MAX_MEDIA_FILE_BYTES, formatMediaLimit } from "@/lib/media/limits";
 import { deleteMedia, prepareSignedMediaUploads, removeUploadedMedia, verifySignedMediaUploads, type MediaUploadDescriptor } from "@/lib/media/storage";
 import type { ApprovalRecord, UpdateMediaRecord } from "@/types/domain";
@@ -38,7 +38,8 @@ export async function prepareMediaUploadsAction(
     const context = await resolveUpdateScope(projectId, vendorId);
     return { ok: true, uploads: await prepareSignedMediaUploads(files, { actor: context.session, project: context.project, vendor: context.vendor }) };
   } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : "Could not prepare media uploads." };
+    console.error("Media upload preparation failed", error);
+    return { ok: false, message: getUpdateErrorMessage(error) };
   }
 }
 
@@ -96,12 +97,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
   } catch (error) {
     console.error("Update submission failed", error);
     await removeUploadedMedia(uploadedMedia);
-    const message = error instanceof Error
-      ? error.message
-      : typeof error === "object" && error && "message" in error && typeof error.message === "string"
-        ? error.message
-        : "The update could not be submitted. Please try again.";
-    return { ok: false, message };
+    return { ok: false, message: getUpdateErrorMessage(error) };
   }
 }
 

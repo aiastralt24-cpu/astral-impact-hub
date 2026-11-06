@@ -1,11 +1,11 @@
 "use client";
 
 import { startTransition, useEffect, useMemo, useState } from "react";
-import { Camera, ChevronDown, Save, Send, X } from "lucide-react";
+import { AlertCircle, Camera, CheckCircle2, ChevronDown, LoaderCircle, Save, Send, X } from "lucide-react";
 
 import { createUpdateAction, prepareMediaUploadsAction } from "@/features/updates/actions";
 import { resolveAssignedProjectId } from "@/lib/domain/project-selection";
-import { validateBeneficiaryCount } from "@/lib/domain/update-validation";
+import { getUpdateErrorMessage, validateBeneficiaryCount } from "@/lib/domain/update-validation";
 import { MAX_MEDIA_FILES_PER_UPDATE, MAX_MEDIA_FILE_BYTES, formatMediaLimit } from "@/lib/media/limits";
 import { createClient } from "@/lib/supabase/client";
 import type { ProjectRecord, UpdateMediaRecord, VendorRecord } from "@/types/domain";
@@ -18,6 +18,11 @@ type UpdateWizardProps = {
 };
 
 const DRAFT_KEY = "foundation-hub:update-draft:v2";
+
+type SubmissionStatus = {
+  tone: "info" | "error" | "success";
+  message: string;
+};
 
 export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjectId }: UpdateWizardProps) {
   const [projectId, setProjectId] = useState(() => resolveAssignedProjectId(projects, initialProjectId));
@@ -32,7 +37,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
   const [challenges, setChallenges] = useState("");
   const [nextSteps, setNextSteps] = useState("");
   const [sensitiveContent, setSensitiveContent] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<SubmissionStatus | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,13 +68,13 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
 
   function saveDraft(showMessage = true) {
     if (!description.trim() && !reachCount && mediaFiles.length === 0) {
-      if (showMessage) setStatus("Add something before saving.");
+      if (showMessage) setStatus({ tone: "error", message: "Add a description, outcome, or media file before saving." });
       return;
     }
     const draft = draftPayload();
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     setLastSavedAt(draft.savedAt);
-    if (showMessage) setStatus("Saved for later on this device.");
+    if (showMessage) setStatus({ tone: "success", message: "Draft saved on this device." });
   }
 
   useEffect(() => {
@@ -89,7 +94,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         setNextSteps(String(draft.nextSteps ?? ""));
         setSensitiveContent(Boolean(draft.sensitiveContent));
         setLastSavedAt(typeof draft.savedAt === "string" ? draft.savedAt : null);
-        setStatus("Your saved update has been restored.");
+        setStatus({ tone: "info", message: "Your saved draft has been restored." });
       }
     } catch {
       window.localStorage.removeItem(DRAFT_KEY);
@@ -126,42 +131,42 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
 
   function submitUpdate() {
     if (!selectedProject) {
-      setStatus("Select a project before submitting an update.");
+      setStatus({ tone: "error", message: "Select a project before submitting the update." });
       return;
     }
     if (!description.trim()) {
-      setStatus("Please describe what happened.");
+      setStatus({ tone: "error", message: "Describe what happened before submitting the update." });
       return;
     }
     const beneficiaryCountError = validateBeneficiaryCount(reachCount);
     if (beneficiaryCountError) {
-      setStatus(beneficiaryCountError);
+      setStatus({ tone: "error", message: beneficiaryCountError });
       return;
     }
     const oversizedFile = mediaFiles.find((file) => file.size > MAX_MEDIA_FILE_BYTES);
     if (oversizedFile) {
-      setStatus(`${oversizedFile.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} limit.`);
+      setStatus({ tone: "error", message: `${oversizedFile.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} per-file limit.` });
       return;
     }
     if (mediaFiles.length > MAX_MEDIA_FILES_PER_UPDATE) {
-      setStatus(`Select no more than ${MAX_MEDIA_FILES_PER_UPDATE} files per update.`);
+      setStatus({ tone: "error", message: `Select no more than ${MAX_MEDIA_FILES_PER_UPDATE} files per update.` });
       return;
     }
 
     setIsSubmitting(true);
-    setStatus("Submitting your update...");
+    setStatus({ tone: "info", message: "Starting submission..." });
     startTransition(async () => {
       try {
         let uploadedMedia: UpdateMediaRecord[] = [];
         if (mediaFiles.length > 0) {
-          setStatus(`Preparing ${mediaFiles.length} media ${mediaFiles.length === 1 ? "file" : "files"}...`);
+          setStatus({ tone: "info", message: `Preparing ${mediaFiles.length} media ${mediaFiles.length === 1 ? "file" : "files"}...` });
           const prepared = await prepareMediaUploadsAction(
             selectedProject.id,
             selectedVendor?.id ?? "",
             mediaFiles.map((file) => ({ filename: file.name, mimeType: file.type, sizeBytes: file.size }))
           );
           if (!prepared.ok) {
-            setStatus(prepared.message);
+            setStatus({ tone: "error", message: prepared.message });
             return;
           }
 
@@ -170,7 +175,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
           for (let start = 0; start < prepared.uploads.length; start += parallelUploads) {
             const batch = prepared.uploads.slice(start, start + parallelUploads);
             const end = Math.min(start + batch.length, prepared.uploads.length);
-            setStatus(`Uploading files ${start + 1}–${end} of ${prepared.uploads.length}...`);
+            setStatus({ tone: "info", message: `Uploading files ${start + 1}–${end} of ${prepared.uploads.length}...` });
             await Promise.all(batch.map(async (upload, batchIndex) => {
               const file = mediaFiles[start + batchIndex];
               const { error } = await supabase.storage
@@ -185,7 +190,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
           uploadedMedia = prepared.uploads.map((upload) => upload.media);
         }
 
-        setStatus("Saving your update...");
+        setStatus({ tone: "info", message: "Files uploaded. Saving the update..." });
         const formData = new FormData();
         const fields = {
         projectId: selectedProject.id,
@@ -209,11 +214,11 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
         Object.entries(fields).forEach(([key, value]) => formData.set(key, value));
         formData.set("uploadedMedia", JSON.stringify(uploadedMedia));
         const result = await createUpdateAction(formData);
-        setStatus(result.message);
+        setStatus({ tone: result.ok ? "success" : "error", message: result.message });
         if (result.ok) resetForm();
       } catch (error) {
         console.error("Update submission request failed", error);
-        setStatus(error instanceof Error ? error.message : "The update was not submitted. Check your connection and try again.");
+        setStatus({ tone: "error", message: getUpdateErrorMessage(error) });
       } finally {
         setIsSubmitting(false);
       }
@@ -293,7 +298,21 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
               className="sr-only"
               onChange={(event) => {
                 const additions = Array.from(event.target.files ?? []);
-                setMediaFiles((current) => [...current, ...additions.filter((file) => !current.some((item) => item.name === file.name && item.size === file.size))]);
+                const unsupported = additions.find((file) => !file.type.startsWith("image/") && !file.type.startsWith("video/"));
+                const oversized = additions.find((file) => file.size > MAX_MEDIA_FILE_BYTES);
+                if (unsupported) {
+                  setStatus({ tone: "error", message: `${unsupported.name} is not a supported image or video.` });
+                } else if (oversized) {
+                  setStatus({ tone: "error", message: `${oversized.name} is larger than the ${formatMediaLimit(MAX_MEDIA_FILE_BYTES)} per-file limit.` });
+                } else {
+                  const uniqueAdditions = additions.filter((file) => !mediaFiles.some((item) => item.name === file.name && item.size === file.size));
+                  if (mediaFiles.length + uniqueAdditions.length > MAX_MEDIA_FILES_PER_UPDATE) {
+                    setStatus({ tone: "error", message: `You can attach up to ${MAX_MEDIA_FILES_PER_UPDATE} files per update.` });
+                  } else {
+                    setMediaFiles((current) => [...current, ...uniqueAdditions]);
+                    setStatus(null);
+                  }
+                }
                 event.target.value = "";
               }}
             />
@@ -334,7 +353,22 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
           </div>
         </details>
 
-        {status ? <p role="status" className="rounded-xl bg-[#f4f6fa] px-4 py-3 text-sm text-[var(--foreground)]">{status}</p> : null}
+        {status ? (
+          <div
+            role={status.tone === "error" ? "alert" : "status"}
+            aria-live={status.tone === "error" ? "assertive" : "polite"}
+            className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              status.tone === "error"
+                ? "border-rose-200 bg-rose-50 text-rose-800"
+                : status.tone === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-blue-200 bg-blue-50 text-blue-800"
+            }`}
+          >
+            {status.tone === "error" ? <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /> : status.tone === "success" ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /> : <LoaderCircle className={`mt-0.5 h-5 w-5 shrink-0 ${isSubmitting ? "animate-spin" : ""}`} />}
+            <div><p className="font-semibold">{status.tone === "error" ? "Action needed" : status.tone === "success" ? "Done" : "Status"}</p><p className="mt-0.5">{status.message}</p></div>
+          </div>
+        ) : null}
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button type="button" onClick={() => saveDraft(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)]">
