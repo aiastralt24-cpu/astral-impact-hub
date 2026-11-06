@@ -63,7 +63,7 @@ export function Sidebar({ session }: { session: AppUser }) {
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-30 bg-[rgba(18,26,39,0.18)] backdrop-blur-sm lg:hidden"
+          className="sidebar-backdrop fixed inset-0 z-30 bg-[rgba(18,26,39,0.18)] backdrop-blur-sm lg:hidden"
           aria-label="Close menu"
         />
       ) : null}
@@ -126,7 +126,7 @@ export function Sidebar({ session }: { session: AppUser }) {
                 href={item.href}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "group flex items-center rounded-2xl text-sm transition-all",
+                  "group flex items-center rounded-2xl text-sm transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.985]",
                   collapsed ? "justify-center px-0 py-3" : "gap-3 px-4 py-2.5",
                   active
                     ? "bg-[rgba(0,89,255,0.12)] text-[var(--primary)] ring-1 ring-[rgba(0,89,255,0.22)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]"
