@@ -1,5 +1,6 @@
 "use server";
 
+import { scheduleProjectEmails } from "@/lib/notifications/schedule";
 import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
@@ -36,6 +37,7 @@ export async function createWorkspaceUserAction(formData: FormData) {
     managedByUserId: session.id
   });
 
+  scheduleProjectEmails();
   revalidatePath("/settings");
 }
 
@@ -59,6 +61,7 @@ export async function updateWorkspaceUserAction(formData: FormData) {
     assignedVendorIds: formData.getAll("assignedVendorIds").map(String).filter(Boolean)
   });
 
+  scheduleProjectEmails();
   revalidatePath("/settings");
 }
 
@@ -74,5 +77,6 @@ export async function deleteWorkspaceUserAction(formData: FormData) {
   }
 
   await deleteWorkspaceUser(userId);
+  scheduleProjectEmails();
   revalidatePath("/settings");
 }

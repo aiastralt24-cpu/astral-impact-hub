@@ -1,5 +1,6 @@
 "use server";
 
+import { scheduleProjectEmails } from "@/lib/notifications/schedule";
 import { revalidatePath } from "next/cache";
 
 import { requireSession } from "@/lib/auth/session";
@@ -89,6 +90,7 @@ export async function createUpdateAction(formData: FormData): Promise<CreateUpda
     media: uploadedMedia
   });
 
+  scheduleProjectEmails();
   revalidatePath("/updates");
   revalidatePath("/dashboard");
   revalidatePath("/analytics");
@@ -117,6 +119,7 @@ export async function approvalAction(formData: FormData) {
     comment: String(formData.get("comment") ?? "")
   });
 
+  scheduleProjectEmails();
   revalidatePath("/updates");
   revalidatePath("/dashboard");
   revalidatePath("/analytics");
@@ -147,7 +150,6 @@ export async function deleteMediaAction(formData: FormData): Promise<DeleteMedia
 
     await deleteMedia(mediaEntry.media, { actor: session });
     await deleteMediaAssetById(mediaAssetId);
-
     revalidatePath("/media");
     revalidatePath("/updates");
     revalidatePath("/dashboard");

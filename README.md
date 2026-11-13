@@ -34,3 +34,7 @@ Astral Impact Hub is a greenfield Next.js + Supabase platform scaffolded from th
 - `types/` zod contracts and domain types
 - `emails/` transactional email templates
 - `supabase/` SQL migrations, seeds, and edge functions
+
+## Project email notifications
+
+See [email notification setup](docs/email-notifications.md) for Resend verification, migration 0007, production configuration and recovery. Notifications are disabled unless `EMAIL_NOTIFICATIONS_ENABLED=true`.

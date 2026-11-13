@@ -1,5 +1,6 @@
 "use server";
 
+import { scheduleProjectEmails } from "@/lib/notifications/schedule";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -73,6 +74,7 @@ export async function createVendorAction(formData: FormData) {
     }
   }
 
+  scheduleProjectEmails();
   revalidatePath("/vendors");
   revalidatePath("/projects");
   revalidatePath("/settings");
@@ -110,6 +112,7 @@ export async function updateVendorAction(formData: FormData) {
     notes: String(formData.get("notes") ?? "")
   });
 
+  scheduleProjectEmails();
   revalidatePath("/vendors");
   revalidatePath("/projects");
   revalidatePath("/settings");
@@ -122,6 +125,7 @@ export async function deleteVendorAction(formData: FormData) {
   }
 
   await deleteVendor(String(formData.get("vendorId") ?? ""));
+  scheduleProjectEmails();
   revalidatePath("/vendors");
   revalidatePath("/projects");
   revalidatePath("/settings");
@@ -153,6 +157,7 @@ export async function updateVendorCredentialsAction(formData: FormData) {
     assignedProjectIds: target.assignedProjectIds,
     assignedVendorIds: target.assignedVendorIds
   });
+  scheduleProjectEmails();
   revalidatePath(`/vendors/${vendorId}`);
   redirect(`/vendors/${vendorId}?credentials=updated`);
 }

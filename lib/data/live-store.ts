@@ -600,10 +600,18 @@ export async function updateProject(input: {
     .eq("id", input.projectId);
   if (error) throw error;
 
-  await supabase.from("project_vendors").delete().eq("project_id", input.projectId);
-  if (input.vendorIds.length > 0) {
+  const { data: existingLinks, error: readLinksError } = await supabase.from("project_vendors").select("vendor_id").eq("project_id", input.projectId);
+  if (readLinksError) throw readLinksError;
+  const existingIds = (existingLinks ?? []).map((link) => String(link.vendor_id));
+  const removedIds = existingIds.filter((id) => !input.vendorIds.includes(id));
+  const addedIds = [...new Set(input.vendorIds)].filter((id) => !existingIds.includes(id));
+  if (removedIds.length) {
+    const { error: unlinkError } = await supabase.from("project_vendors").delete().eq("project_id", input.projectId).in("vendor_id", removedIds);
+    if (unlinkError) throw unlinkError;
+  }
+  if (addedIds.length > 0) {
     const { error: linkError } = await supabase.from("project_vendors").insert(
-      input.vendorIds.map((vendorId) => ({
+      addedIds.map((vendorId) => ({
         project_id: input.projectId,
         vendor_id: vendorId
       }))
@@ -618,7 +626,7 @@ export async function updateProject(input: {
       ? user.assignedProjectIds.includes(input.projectId)
         ? user.assignedProjectIds
         : [...user.assignedProjectIds, input.projectId]
-      : user.assignedProjectIds.filter((id) => id !== input.projectId || Boolean(user.isSuperAdmin));
+      : user.role !== "vendor" ? user.assignedProjectIds : user.assignedProjectIds.filter((id) => id !== input.projectId || Boolean(user.isSuperAdmin));
     await supabase.from("users").update({ assigned_project_ids: assignedProjectIds }).eq("id", user.id);
   }
 

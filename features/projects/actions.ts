@@ -1,5 +1,6 @@
 "use server";
 
+import { scheduleProjectEmails } from "@/lib/notifications/schedule";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -49,6 +50,7 @@ export async function createProjectAction(formData: FormData) {
     requireAdminApproval: formData.get("requireAdminApproval") === "on"
   });
 
+  scheduleProjectEmails();
   revalidatePath("/projects");
   revalidatePath("/dashboard");
   if (project) redirect(`/projects/${project.id}`);
@@ -101,6 +103,7 @@ export async function updateProjectAction(formData: FormData) {
     requireAdminApproval: formData.get("requireAdminApproval") === "on"
   });
 
+  scheduleProjectEmails();
   revalidatePath("/projects");
   revalidatePath("/dashboard");
   revalidatePath("/media");
@@ -115,6 +118,7 @@ export async function deleteProjectAction(formData: FormData) {
   if (!existingProject || !canManageProject(session, projectId, existingProject.internalOwnerId)) return;
 
   await deleteProject(projectId);
+  scheduleProjectEmails();
   revalidatePath("/projects");
   revalidatePath("/dashboard");
   revalidatePath("/media");
@@ -152,6 +156,7 @@ export async function assignProjectToVendorAction(formData: FormData) {
     endDate: project.endDate,
     requireAdminApproval: project.requireAdminApproval
   });
+  scheduleProjectEmails();
   revalidatePath("/projects");
   revalidatePath(`/vendors/${vendorId}`);
   redirect(`/vendors/${vendorId}?project=assigned`);

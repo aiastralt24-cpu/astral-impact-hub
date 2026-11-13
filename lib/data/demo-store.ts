@@ -443,7 +443,7 @@ export async function updateProject(input: {
       ? user.assignedProjectIds.includes(input.projectId)
         ? user.assignedProjectIds
         : [...user.assignedProjectIds, input.projectId]
-      : user.assignedProjectIds.filter((id) => id !== input.projectId || user.isSuperAdmin);
+      : user.role !== "vendor" ? user.assignedProjectIds : user.assignedProjectIds.filter((id) => id !== input.projectId || user.isSuperAdmin);
 
     return {
       ...user,

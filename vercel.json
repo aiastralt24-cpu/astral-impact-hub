@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/vendor-score-update",
       "schedule": "0 0 * * 0"
+    },
+    {
+      "path": "/api/cron/email-notifications",
+      "schedule": "* * * * *"
     }
   ]
 }
