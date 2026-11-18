@@ -57,14 +57,14 @@ export const approvalActionSchema = z.object({
 });
 
 export const generatedContentSchema = z.object({
-  emotionalHook: z.string(),
-  instagramCaptionShort: z.string(),
-  instagramCaptionLong: z.string(),
-  reelScript: z.string(),
-  carouselBreakdown: z.array(z.string()),
-  telegramUpdate: z.string(),
-  whatsappDigest: z.string(),
-  csrSummary: z.string()
+  emotionalHook: z.string().trim().min(1).max(500),
+  instagramCaptionShort: z.string().trim().min(1).max(2200),
+  instagramCaptionLong: z.string().trim().min(1).max(2200),
+  reelScript: z.string().trim().min(1).max(5000),
+  carouselBreakdown: z.array(z.string().trim().min(1).max(1000)).min(1).max(10),
+  telegramUpdate: z.string().trim().min(1).max(4096),
+  whatsappDigest: z.string().trim().min(1).max(4096),
+  csrSummary: z.string().trim().min(1).max(5000)
 });
 
 export const distributionRequestSchema = z.object({

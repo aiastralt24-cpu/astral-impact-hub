@@ -1,48 +1,26 @@
+"use client";
 import Link from "next/link";
-import { ArrowUpRight, Building2, CalendarDays, CheckCircle2, CircleAlert, MapPin } from "lucide-react";
-
+import { useState } from "react";
+import { LayoutGrid, List, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { ProjectRecord } from "@/types/domain";
 
+function date(value: string) { if (!value) return "Not set"; const parsed = new Date(value); return Number.isNaN(parsed.valueOf()) ? value : parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }); }
 export function ProjectList({ projects, projectsWithUpdates = [] }: { projects: ProjectRecord[]; projectsWithUpdates?: string[] }) {
-  if (projects.length === 0) return <div className="rounded-[24px] border border-dashed border-[var(--border)] bg-white/70 p-10 text-center"><Building2 className="mx-auto h-8 w-8 text-[var(--gray-mid)]" /><p className="mt-4 font-semibold text-[var(--foreground)]">No projects available yet</p><p className="mt-1 text-sm text-[var(--gray-mid)]">Create a project to start tracking delivery and updates.</p></div>;
-  return <section aria-labelledby="project-list-heading" className="space-y-4">
-    <div className="flex items-center justify-between gap-4"><div><h2 id="project-list-heading" className="font-display text-2xl font-black tracking-[-0.03em]">All projects</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">{projects.length} {projects.length === 1 ? "project" : "projects"} in your workspace</p></div></div>
-    <div className="grid gap-4 xl:grid-cols-2">
-    {projects.map((project) => {
-      const hasUpdate = projectsWithUpdates.includes(project.id);
-      const missingSetup = [
-        !project.projectBrief && "project overview",
-        !project.location && "location",
-        !(project.startDate && project.endDate) && "project dates",
-        !project.internalOwnerId && "project manager",
-        !(project.vendorIds.length > 0 || project.vendorName === "Managed internally") && "CSR Associate",
-        !hasUpdate && "first update"
-      ].filter(Boolean) as string[];
-      const healthTone = project.healthScore < 45 ? "rose" : project.healthScore < 70 ? "amber" : "emerald";
-      const reportingLabel = !hasUpdate ? "First update needed" : project.healthScore < 45 ? "Reporting needs attention" : project.healthScore < 70 ? "Reporting follow-up" : "Reporting on track";
-      const statusLabel = project.status.replaceAll("_", " ");
-      return (
-      <article key={project.id} className="group relative overflow-hidden rounded-[24px] border border-[var(--border)] bg-white shadow-[0_12px_32px_rgba(17,24,39,0.055)] transition duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-[0_18px_42px_rgba(17,24,39,0.09)]">
-        <div className="absolute inset-y-0 left-0 w-1 bg-[linear-gradient(180deg,#0059ff,#77a7ff)]" />
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--primary)]">{project.category || "Project"}</span>
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold capitalize tracking-[0.08em] text-slate-600">{statusLabel}</span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${healthTone === "rose" ? "bg-rose-50 text-rose-700" : healthTone === "amber" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{healthTone === "emerald" ? <CheckCircle2 className="h-3 w-3" /> : <CircleAlert className="h-3 w-3" />}{reportingLabel}</span>
-          </div>
-          <div className="mt-4 flex items-start justify-between gap-4">
-            <div className="min-w-0"><h3 className="font-display text-2xl font-black tracking-[-0.035em] text-[var(--foreground)]">{project.name}</h3><p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">{project.projectBrief || "Project overview has not been added yet."}</p></div>
-            <Link href={`/projects/${project.id}`} aria-label={`Open ${project.name}`} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-[var(--primary)] shadow-sm transition group-hover:border-blue-200 group-hover:bg-blue-50"><ArrowUpRight className="h-4 w-4" /></Link>
-          </div>
-          <div className="mt-5 grid gap-2 text-sm text-[var(--gray-mid)] sm:grid-cols-3">
-            <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5"><MapPin className="h-4 w-4 shrink-0" /><span className="truncate">{project.location || "Location not added"}</span></div>
-            <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5"><Building2 className="h-4 w-4 shrink-0" /><span className="truncate">{project.vendorName || "Managed internally"}</span></div>
-            <div className="flex min-w-0 items-center gap-2 rounded-xl bg-slate-50 px-3 py-2.5"><CalendarDays className="h-4 w-4 shrink-0" /><span className="truncate">{project.startDate && project.endDate ? `${project.startDate} – ${project.endDate}` : "Dates not added"}</span></div>
-          </div>
-          {missingSetup.length > 0 ? <div className="mt-4 flex items-center gap-2 border-t border-[var(--border)] pt-4 text-xs text-amber-800"><CircleAlert className="h-4 w-4 shrink-0" /><span><span className="font-semibold">Setup incomplete:</span> Add {missingSetup[0]}{missingSetup.length > 1 ? ` and ${missingSetup.length - 1} more` : ""}.</span></div> : null}
-        </div>
-      </article>
-    )})}
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const [view, setView] = useState<"list" | "cards">("list");
+  const filtered = projects.filter(project => `${project.name} ${project.vendorName} ${project.location}`.toLowerCase().includes(query.trim().toLowerCase()) && (status === "all" || project.status === status));
+  return <section aria-label="Projects" className="space-y-4">
+    <div className="flex flex-wrap items-center gap-3"><label className="relative w-full sm:w-72"><Search aria-hidden="true" className="absolute left-3 top-3 h-4 w-4 text-slate-400" /><span className="sr-only">Search projects</span><input className="h-10 w-full rounded-lg border border-[var(--border)] bg-white pl-10 pr-3" type="search" placeholder="Search projects or associates" value={query} onChange={e => setQuery(e.target.value)} /></label><select aria-label="Filter by project status" className="h-10 rounded-lg border border-[var(--border)] bg-white px-3 text-sm" value={status} onChange={e => setStatus(e.target.value)}><option value="all">All statuses</option>{[...new Set(projects.map(p => p.status))].map(value => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select><p aria-live="polite" className="text-xs text-[var(--gray-mid)]">{filtered.length} projects</p><div className="ml-auto flex rounded-lg border border-[var(--border)] bg-white p-1">{(["list", "cards"] as const).map(mode => <button key={mode} type="button" aria-label={`${mode === "list" ? "List" : "Card"} view`} aria-pressed={view === mode} onClick={() => setView(mode)} className={`flex h-8 w-9 items-center justify-center rounded-md ${view === mode ? "bg-blue-50 text-[var(--primary)]" : "text-slate-500 hover:bg-slate-50"}`}>{mode === "list" ? <List className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}</button>)}</div></div>
+    <div className={view === "cards" ? "grid gap-4 lg:grid-cols-2" : "overflow-hidden rounded-2xl border border-[var(--border)] bg-white divide-y divide-[var(--border)]"}>
+      {filtered.map(project => { const hasUpdate = projectsWithUpdates.includes(project.id); return <article key={project.id} className={view === "cards" ? "rounded-2xl border border-[var(--border)] bg-white p-5" : "grid items-start gap-4 p-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"}>
+        <div><div className="flex flex-wrap items-center gap-2"><Link href={`/projects/${project.id}`} className="text-base font-semibold hover:text-[var(--primary)]">{project.name}</Link><Badge variant={project.status === "active" || project.status === "completed" ? "approved" : "neutral"} className="capitalize">{project.status.replaceAll("_", " ")}</Badge></div><p className="mt-1 text-sm text-[var(--gray-mid)]">{project.location || "Location not added"}</p>{view === "cards" && <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--gray-mid)]">{project.projectBrief || "No overview added yet."}</p>}</div>
+        <div className={view === "cards" ? "mt-4" : ""}><p className="text-xs text-[var(--gray-mid)]">CSR Associate</p><p className="mt-1 text-sm">{project.vendorName || "Managed internally"}</p></div>
+        <div className={view === "cards" ? "mt-3" : ""}><p className="text-xs text-[var(--gray-mid)]">Project dates</p><p className="mt-1 text-xs leading-5">{date(project.startDate)} – {date(project.endDate)}</p></div>
+        <div className={`flex flex-wrap items-center gap-3 ${view === "cards" ? "mt-4 border-t border-[var(--border)] pt-4" : "lg:flex-col lg:items-end"}`}><Link href={`/projects/${project.id}`} className="inline-flex min-h-10 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-medium hover:bg-slate-50">View project</Link>{!hasUpdate ? <Link href={`/updates?projectId=${project.id}`} className="text-xs font-medium text-amber-800 hover:underline">Add first update</Link> : project.healthScore < 70 ? <span className="text-xs text-amber-800">Reporting needs attention</span> : <span className="text-xs text-emerald-700">Reporting on track</span>}</div>
+      </article>; })}
+      {filtered.length === 0 && <div className="p-10 text-center lg:col-span-2"><p className="font-medium">No projects found</p><p className="mt-1 text-sm text-[var(--gray-mid)]">Try another search or change your filters.</p><button type="button" onClick={() => { setQuery(""); setStatus("all"); }} className="mt-3 text-sm font-medium text-[var(--primary)]">Clear filters</button></div>}
     </div>
   </section>;
 }

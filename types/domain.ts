@@ -87,6 +87,7 @@ export type PreparedMediaUpload = {
 };
 
 export type UpdateRecord = {
+  updatedAt?: string;
   id: string;
   projectId: string;
   projectName: string;
@@ -144,7 +145,22 @@ export type GeneratedContentPackage = {
   csrSummary: string;
 };
 
+export type ContentWorkflow = {
+  revision: number;
+  status: "draft" | "in_review" | "approved";
+  sourceHash: string;
+  sourceUpdatedAt?: string;
+  model?: string;
+  updatedAt: string;
+  editedBy: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  reviewNote?: string;
+  instagramMediaId?: string;
+};
+
 export type GeneratedContentRecord = GeneratedContentPackage & {
+  workflow?: ContentWorkflow;
   id: string;
   updateId: string;
   projectName: string;
@@ -156,9 +172,15 @@ export type DistributionRequestRecord = {
   updateId: string;
   contentId: string;
   channel: DistributionChannel;
+  revision?: number;
+  recipient?: string;
 };
 
 export type DistributionLogRecord = {
+  providerMessageId?: string;
+  contentRevision?: number;
+  destination?: string;
+  idempotencyKey?: string;
   id: string;
   updateId: string;
   contentId: string;

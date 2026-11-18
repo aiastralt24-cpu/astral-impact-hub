@@ -26,13 +26,13 @@ export function ProjectGrid({ projects }: { projects: ProjectRecord[] }) {
               </Badge>
               <Badge
                 variant={project.readinessScore >= 75 ? "approved" : project.readinessScore < 45 ? "rejected" : "pending"}
-                className="border-white/42 bg-white/82 font-semibold shadow-[0_8px_18px_rgba(15,23,42,0.10)]"
+                className="border-white/42 bg-white/82 font-semibold shadow-sm"
               >
                 Content readiness {project.readinessScore}%
               </Badge>
             </div>
             <div className="relative mt-10">
-              <p className="font-display text-2xl font-bold">{project.name}</p>
+              <p className="font-display text-lg font-semibold">{project.name}</p>
               <div className="mt-3 flex items-center gap-2 text-sm text-white/80">
                 <MapPin className="h-4 w-4" />
                 <span>{project.location}</span>

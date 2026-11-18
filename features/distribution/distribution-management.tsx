@@ -1,95 +1,29 @@
-import { distributeAction } from "@/features/distribution/actions";
-import { Badge } from "@/components/ui/badge";
-import type { DistributionLogRecord, GeneratedContentRecord, UpdateRecord } from "@/types/domain";
+"use client";
+import Link from "next/link";
+import { useActionState, useState } from "react";
+import { distributeAction } from "./actions";
+import { contentReady } from "@/lib/communications/model";
+import type { DistributionLogRecord,GeneratedContentRecord,UpdateRecord } from "@/types/domain";
 
-type DistributionManagementProps = {
-  updates: UpdateRecord[];
-  generatedContent: GeneratedContentRecord[];
-  distributionLog: DistributionLogRecord[];
-};
-
-export function DistributionManagement({ updates, generatedContent, distributionLog }: DistributionManagementProps) {
-  const distributable = updates
-    .map((update) => ({
-      update,
-      content: generatedContent.find((item) => item.updateId === update.id)
-    }))
-    .filter((item) => item.content);
-
-  const sentThisWeek = distributionLog.filter(
-    (entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-  );
-
-  return (
-    <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Content ready to share</p>
-          <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{distributable.length}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Approved content waiting to be shared</p>
-        </div>
-        <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Shared this week</p>
-          <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)]">{sentThisWeek.length}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">Content shared across all active platforms</p>
-        </div>
-        <div className="glass-card rounded-[28px] p-5">
-          <p className="text-sm font-semibold text-[var(--foreground)]">Last shared on</p>
-          <p className="font-display mt-3 text-4xl font-black tracking-[-0.05em] text-[var(--foreground)] capitalize">{distributionLog[0]?.channel ?? "None"}</p>
-          <p className="mt-2 text-sm text-[var(--gray-mid)]">
-            {distributionLog[0] ? distributionLog[0].message : "No content has been shared yet"}
-          </p>
-        </div>
-      </section>
-
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-4">
-        {distributable.map(({ update, content }) => (
-          <div key={update.id} className="glass-card rounded-[28px] p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-display text-2xl font-black text-[var(--foreground)]">{update.projectName}</h3>
-                <p className="mt-2 text-sm text-[var(--gray-mid)]">{content?.emotionalHook}</p>
-              </div>
-              <Badge variant={update.status === "published" ? "published" : "review"}>{update.status}</Badge>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              {["telegram", "whatsapp", "instagram"].map((channel) => (
-                <form action={distributeAction} key={channel}>
-                  <input type="hidden" name="updateId" value={update.id} />
-                  <input type="hidden" name="contentId" value={content?.id} />
-                  <button
-                    name="channel"
-                    value={channel}
-                    className={`rounded-full px-4 py-2 text-sm font-medium ring-1 ${
-                      channel === "telegram"
-                        ? "bg-[var(--primary)] text-white ring-[var(--primary)]/20"
-                        : channel === "whatsapp"
-                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                          : "bg-amber-50 text-amber-700 ring-amber-200"
-                    }`}
-                  >
-                    Share on {channel}
-                  </button>
-                </form>
-              ))}
-            </div>
-          </div>
-        ))}
-        </div>
-        <div className="glass-card rounded-[28px] p-6">
-        <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Sharing history</p>
-        <div className="mt-4 space-y-3">
-          {distributionLog.length === 0 ? <p className="text-sm text-[var(--gray-mid)]">No sharing activity yet.</p> : null}
-          {distributionLog.map((entry) => (
-            <div key={entry.id} className="rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
-              <p className="font-medium capitalize text-[var(--foreground)]">{entry.channel}</p>
-              <p className="mt-1 text-[var(--gray-mid)]">{entry.message}</p>
-            </div>
-          ))}
-        </div>
-        </div>
-      </div>
-    </div>
-  );
+type Connections = {telegram:string[];whatsapp:string[];instagram:string[]};
+function ShareForm({content,connections,destinations}:{content:GeneratedContentRecord;connections:Connections;destinations:{telegram:string;instagram:string}}) {
+  const [channel,setChannel]=useState<"telegram"|"whatsapp"|"instagram">("telegram");
+  const [result,action,pending]=useActionState(distributeAction,{ok:false,message:""});
+  const missing=connections[channel];
+  return <form action={action} className="space-y-4 rounded-2xl border border-[var(--border)] bg-white p-5">
+    <h2 className="text-lg font-semibold">{content.projectName}</h2><p className="text-xs text-emerald-700">Approved version {content.workflow?.revision} · {content.workflow?.approvedAt?.slice(0,10)}</p>
+    <input type="hidden" name="updateId" value={content.updateId}/><input type="hidden" name="contentId" value={content.id}/><input type="hidden" name="revision" value={content.workflow?.revision}/>
+    <label className="grid max-w-sm gap-2 text-sm font-medium">Channel<select name="channel" value={channel} onChange={e=>setChannel(e.target.value as typeof channel)} className="h-11 border border-[var(--border)] px-3"><option value="telegram">Telegram</option><option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option></select></label>
+    <div className="rounded-xl bg-slate-50 p-4"><p className="mb-2 text-xs font-medium text-[var(--gray-mid)]">Message preview</p><p className="whitespace-pre-wrap text-sm leading-6">{channel === "telegram"?content.telegramUpdate:channel === "whatsapp"?content.whatsappDigest:content.instagramCaptionLong}</p></div>
+    {channel === "instagram" && content.workflow?.instagramMediaId && <img src={`/api/media/${content.workflow.instagramMediaId}`} alt="Approved Instagram photo" className="max-h-72 rounded-lg object-contain"/>}
+    {channel === "whatsapp" ? <><label className="grid max-w-sm gap-2 text-sm font-medium">Recipient phone number<input required type="tel" name="recipient" placeholder="+91…" className="h-11 border border-[var(--border)] px-3"/></label><label className="flex items-start gap-2 text-sm"><input type="checkbox" name="whatsappWindow" required className="mt-1"/>This recipient opted in and messaged our business within the last 24 hours.</label><p className="text-xs text-[var(--gray-mid)]">For messages outside that window, use an approved WhatsApp template. API acceptance does not prove delivery; connected webhooks report delivery updates.</p></> : <p className="text-sm">Destination: <strong>{destinations[channel] || "Not configured"}</strong>{channel === "instagram" && !content.workflow?.instagramMediaId && <span className="block mt-1 text-amber-800">No approved photo. Select a JPEG in the draft and approve the new version.</span>}</p>}
+    {missing.length>0 && <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Not connected. Configure {missing.join(", ")}.</p>}
+    <label key={channel} className="flex items-start gap-2 text-sm"><input required type="checkbox" name="confirmed" className="mt-1"/>I have reviewed this version and want to send it to the destination above.</label>
+    {result.message && <p role={result.ok?"status":"alert"} className={`rounded-lg p-3 text-sm ${result.ok?"bg-emerald-50 text-emerald-800":"bg-rose-50 text-rose-800"}`}>{result.message}</p>}
+    <button disabled={pending||missing.length>0||(channel === "instagram"&&!content.workflow?.instagramMediaId)} className="min-h-10 rounded-lg bg-[var(--primary)] px-4 text-sm font-medium text-white disabled:opacity-50">{pending?"Sending…":`Send to ${channel}`}</button>
+  </form>;
+}
+export function DistributionManagement({updates,generatedContent,distributionLog,connections,destinations}:{updates:UpdateRecord[];generatedContent:GeneratedContentRecord[];distributionLog:DistributionLogRecord[];connections:Connections;destinations:{telegram:string;instagram:string}}) {
+  const approved=generatedContent.filter(content=>contentReady(content)&&updates.some(update=>update.id===content.updateId&&["approved","published"].includes(update.status)));
+  return <div className="space-y-5"><p className="text-sm text-[var(--gray-mid)]">Only approved content versions can be shared. Editing a draft requires fresh approval.</p><div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,1fr)]"><div className="space-y-4">{approved.map(content=><ShareForm key={`${content.id}:${content.workflow?.revision}`} content={content} connections={connections} destinations={destinations}/>)}{!approved.length && <div className="rounded-xl border border-[var(--border)] bg-white p-6"><h2 className="font-semibold">No approved content ready to share</h2><p className="mt-2 text-sm text-[var(--gray-mid)]">Generate or edit a draft, then submit it for administrator approval.</p><Link href="/content" className="mt-4 inline-block text-sm font-medium text-[var(--primary)]">Open communications</Link></div>}</div><aside className="space-y-4"><section className="rounded-2xl border border-[var(--border)] bg-white p-5"><h2 className="font-semibold">Channel setup</h2>{Object.entries(connections).map(([name,missing])=><div key={name} className="mt-3 text-sm"><p className="font-medium capitalize">{name} · {missing.length?"Not configured":"Configured · verified when sending"}</p>{missing.length>0&&<p className="mt-1 break-words text-xs text-[var(--gray-mid)]">Missing: {missing.join(", ")}</p>}</div>)}</section><section className="rounded-2xl border border-[var(--border)] bg-white p-5"><h2 className="font-semibold">Sharing history</h2>{!distributionLog.length&&<p className="mt-3 text-sm text-[var(--gray-mid)]">No delivery attempts yet.</p>}<div className="divide-y divide-[var(--border)]">{distributionLog.map(log=><div key={log.id} className="py-4 text-sm"><p className="font-medium capitalize">{log.channel} · {log.providerMessageId||["sending","failed","unknown"].includes(log.status)?log.status:"Unverified legacy record"}</p><p className="mt-1 text-xs text-[var(--gray-mid)]">{log.createdAt.slice(0,16).replace("T"," ")} · Version {log.contentRevision || "—"}{log.destination?` · ${log.destination}`:""}</p><p className="mt-2">{log.providerMessageId||["sending","failed","unknown"].includes(log.status)?log.message:"This older record has no provider receipt and is not proof of delivery."}</p>{log.providerMessageId&&<p className="mt-2 break-all text-xs text-[var(--gray-mid)]">Receipt: {log.providerMessageId}</p>}</div>)}</div></section></aside></div></div>;
 }

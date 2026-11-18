@@ -53,8 +53,9 @@ export function Sidebar({ session }: { session: AppUser }) {
     <>
       <button
         type="button"
+        aria-label="Open menu"
         onClick={() => setMobileOpen(true)}
-        className="glass-panel fixed left-6 top-6 z-40 flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--foreground)] lg:hidden"
+        className="glass-panel fixed left-6 top-6 z-40 flex h-11 w-11 items-center justify-center rounded-lg text-[var(--foreground)] lg:hidden"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -70,9 +71,9 @@ export function Sidebar({ session }: { session: AppUser }) {
 
       <aside
         className={cn(
-          "fixed inset-y-6 left-6 z-40 flex flex-col rounded-[32px] border border-[rgba(18,26,39,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(246,249,254,0.94))] px-4 py-4 text-[var(--foreground)] shadow-[0_18px_52px_rgba(16,24,40,0.10)] backdrop-blur-[22px] transition-all duration-300 lg:sticky lg:top-6 lg:z-10 lg:ml-6 lg:mr-6 lg:h-[calc(100vh-3rem)] lg:self-start",
-          collapsed ? "w-[84px]" : "w-[276px]",
-          mobileOpen ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0"
+          "fixed inset-y-6 left-6 z-40 flex flex-col rounded-lg border border-[rgba(18,26,39,0.08)] bg-white px-4 py-4 text-[var(--foreground)] shadow-sm shrink-0 transition-[width,transform] duration-200 lg:sticky lg:top-6 lg:z-10 lg:ml-6 lg:mr-6 lg:h-[calc(100vh-3rem)] lg:self-start",
+          collapsed ? "w-[84px]" : "w-[248px]",
+          mobileOpen ? "visible translate-x-0" : "invisible -translate-x-[120%] lg:visible lg:translate-x-0"
         )}
       >
         <div className={cn("mb-4", collapsed ? "space-y-3" : "flex items-start justify-between gap-3")}>
@@ -83,7 +84,7 @@ export function Sidebar({ session }: { session: AppUser }) {
               </span>
             ) : (
               <div>
-                <p className="font-display text-[1.15rem] font-black leading-none tracking-[-0.03em] text-[var(--foreground)]">
+                <p className="font-display text-base font-semibold leading-none tracking-[-0.03em] text-[var(--foreground)]">
                   Astral Foundation
                 </p>
               </div>
@@ -92,15 +93,17 @@ export function Sidebar({ session }: { session: AppUser }) {
           <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
             <button
               type="button"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setCollapsed((value) => !value)}
-              className="hidden rounded-2xl bg-white/84 p-2 text-[var(--gray-mid)] ring-1 ring-[var(--border)] transition hover:bg-white lg:block"
+              className="hidden rounded-lg bg-white/84 p-2 text-[var(--gray-mid)] ring-1 ring-[var(--border)] transition hover:bg-white lg:block"
             >
               {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
             <button
               type="button"
+              aria-label="Close navigation"
               onClick={() => setMobileOpen(false)}
-              className="rounded-2xl bg-[#f7f8fc] p-2 text-[var(--gray-mid)] ring-1 ring-[var(--border)] lg:hidden"
+              className="rounded-lg bg-[#f7f8fc] p-2 text-[var(--gray-mid)] ring-1 ring-[var(--border)] lg:hidden"
             >
               <X className="h-4 w-4" />
             </button>
@@ -108,7 +111,7 @@ export function Sidebar({ session }: { session: AppUser }) {
         </div>
 
         {!collapsed ? (
-          <Link href={session.role === "vendor" ? "/profile" : "/dashboard"} className="mb-4 block rounded-[22px] bg-white/72 p-3.5 text-sm ring-1 ring-[rgba(18,26,39,0.08)] transition hover:bg-white">
+          <Link href={session.role === "vendor" ? "/profile" : "/dashboard"} className="mb-4 block rounded-xl bg-white/72 p-3.5 text-sm ring-1 ring-[rgba(18,26,39,0.08)] transition hover:bg-white">
             <p className="font-medium text-[var(--foreground)]">{profile.title}</p>
             {profile.subtitle ? <p className="text-[var(--gray-mid)]">{profile.subtitle}</p> : null}
           </Link>
@@ -117,16 +120,18 @@ export function Sidebar({ session }: { session: AppUser }) {
         {!collapsed ? <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--gray-mid)]">Workspace</p> : null}
         <nav className={cn("flex-1", collapsed ? "space-y-2" : "space-y-1")}>
           {availableNav.map((item, index) => {
-            const active = pathname === item.href;
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             const FallbackIcon = index === 0 ? LayoutDashboard : Icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
                 title={collapsed ? item.label : undefined}
                 className={cn(
-                  "group flex items-center rounded-2xl text-sm transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.985]",
+                  "group flex items-center rounded-lg text-sm transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.985]",
                   collapsed ? "justify-center px-0 py-3" : "gap-3 px-4 py-2.5",
                   active
                     ? "bg-[rgba(0,89,255,0.12)] text-[var(--primary)] ring-1 ring-[rgba(0,89,255,0.22)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]"

@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/session";
 import { assignPartnerToUser, createVendor, createWorkspaceUser, deleteVendor, getCurrentData, getDashboardData, updateVendor, updateWorkspaceUser } from "@/lib/data/demo-store";
+import { sendAccountWelcomeEmail } from "@/lib/email/account-welcome";
 
 export async function createVendorAction(formData: FormData) {
   const session = await requireSession();
@@ -54,6 +55,7 @@ export async function createVendorAction(formData: FormData) {
     await assignPartnerToUser(session.id, vendor.id);
   }
 
+  let welcomeStatus = "not-requested";
   if (vendor && username && password) {
     const primaryContactName = String(formData.get("primaryContactName") ?? "") || vendor.name;
     try {
@@ -67,6 +69,15 @@ export async function createVendorAction(formData: FormData) {
         assignedVendorIds: [vendor.id],
         managedByUserId: session.id
       });
+      const delivery = await sendAccountWelcomeEmail({
+        email,
+        fullName: primaryContactName,
+        username,
+        temporaryPassword: password,
+        accountLabel: "CSR Associate",
+        organizationName: vendor.name
+      });
+      welcomeStatus = delivery.ok ? "sent" : delivery.reason;
     } catch (error) {
       await deleteVendor(vendor.id);
       const message = error instanceof Error ? error.message : String(error);
@@ -78,7 +89,7 @@ export async function createVendorAction(formData: FormData) {
   revalidatePath("/vendors");
   revalidatePath("/projects");
   revalidatePath("/settings");
-  if (vendor) redirect(`/vendors/${vendor.id}`);
+  if (vendor) redirect(`/vendors/${vendor.id}?welcome=${welcomeStatus}`);
 }
 
 export async function updateVendorAction(formData: FormData) {
@@ -137,7 +148,7 @@ export async function updateVendorCredentialsAction(formData: FormData) {
   const vendorId = String(formData.get("vendorId") ?? "");
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
-  if (!userId || !vendorId || !username || !password) return;
+  if (!userId || !vendorId || !username) return;
 
   const data = await getCurrentData();
   const target = data.users.find((user) => user.id === userId && user.role === "vendor" && user.assignedVendorIds.includes(vendorId));
@@ -152,7 +163,7 @@ export async function updateVendorCredentialsAction(formData: FormData) {
     fullName: target.fullName,
     email: target.email,
     username,
-    password,
+    password: password || undefined,
     role: "vendor",
     assignedProjectIds: target.assignedProjectIds,
     assignedVendorIds: target.assignedVendorIds

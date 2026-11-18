@@ -3,9 +3,14 @@
 .env.local
 .env.production
 .next
+.next-preview
 node_modules
 coverage
 .playwright-cli
+.artifacts/
+.data/
+output/
+tmp/
 *.log
 *.tsbuildinfo
 supabase/.temp

@@ -32,8 +32,8 @@ export const navItems: NavItem[] = [
   { href: "/projects", label: "Projects", icon: FolderOpen, roles: ["admin", "project_manager", "vendor"] },
   { href: "/updates", label: "Updates", icon: FileText, roles: ["admin", "project_manager", "content_team", "vendor"] },
   { href: "/media", label: "Media", icon: ImageIcon, roles: ["admin", "project_manager", "content_team", "vendor", "leadership"] },
-  { href: "/content", label: "Stories & Messages", icon: Sparkles, roles: ["admin", "content_team"] },
+  { href: "/content", label: "Communications", icon: Sparkles, roles: ["admin", "content_team"] },
   { href: "/distribution", label: "Share Content", icon: Send, roles: ["admin", "content_team"] },
-  { href: "/analytics", label: "Reports & Insights", icon: BarChart3, roles: ["admin", "leadership"] },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["admin"] }
+  { href: "/analytics", label: "Reports", icon: BarChart3, roles: ["admin", "leadership"] },
+  { href: "/settings", label: "Team access", icon: Settings, roles: ["admin"] }
 ];

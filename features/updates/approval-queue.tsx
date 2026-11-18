@@ -32,14 +32,14 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
       in_review: "Being reviewed",
       revision_requested: "Changes needed",
       approved: "Approved",
-      rejected: "Speak with your manager",
+      rejected: "Rejected",
       published: "Shared"
     };
 
     return (
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
         <div className="border-b border-[var(--border)] px-5 py-4">
-          <h2 className="font-display text-lg font-bold text-[var(--foreground)]">Previous updates</h2>
+          <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">Previous updates</h2>
           <p className="mt-1 text-sm text-[var(--gray-mid)]">Check what you submitted and whether changes are needed.</p>
         </div>
         {visibleUpdates.length > 0 ? (
@@ -71,13 +71,13 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
   const actionable = visibleUpdates.filter((update) => ["pending", "in_review", "revision_requested"].includes(update.status));
 
   return (
-    <section className="overflow-hidden rounded-[24px] border border-[var(--border)] bg-white shadow-[0_12px_34px_rgba(17,24,39,0.05)]">
+    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
       <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4 sm:px-6">
         <div>
-          <h2 className="font-display text-xl font-black text-[var(--foreground)]">Review queue</h2>
+          <h2 className="font-display text-xl font-semibold text-[var(--foreground)]">Review queue</h2>
           <p className="mt-1 text-sm text-[var(--gray-mid)]">Approve submissions or return them with a clear note.</p>
         </div>
-        <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-[var(--primary)] px-3 text-sm font-bold text-white">{actionable.length}</span>
+        <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-[var(--primary)] px-3 text-sm font-semibold text-white">{actionable.length}</span>
       </div>
 
       <div className="divide-y divide-[var(--border)]">
@@ -87,11 +87,11 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <Badge variant={badgeMap[update.status]}>{update.status === "revision_requested" ? "Changes requested" : "Needs review"}</Badge>
-                  <h3 className="mt-3 font-display text-xl font-black text-[var(--foreground)]">{update.projectName}</h3>
+                  <h3 className="mt-3 font-display text-xl font-semibold text-[var(--foreground)]">{update.projectName}</h3>
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--foreground)]">{update.description || "No description was provided."}</p>
                 </div>
                 <div className="text-xs text-[var(--gray-mid)] sm:text-right">
-                  <p className="font-semibold text-[var(--foreground)]">{update.vendorName === "Unknown CSR Associate" ? "Foundation team" : update.vendorName}</p>
+                  <p className="font-semibold text-[var(--foreground)]">{update.vendorName}</p>
                   <p className="mt-1 inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{update.happenedAt}</p>
                 </div>
               </div>
@@ -156,7 +156,7 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
             </article>
           ))
         ) : (
-          <div className="rounded-[28px] border border-[var(--border)] bg-[#f8f9fc] p-6">
+          <div className="rounded-2xl border border-[var(--border)] bg-[#f8f9fc] p-6">
             <p className="text-base font-medium text-[var(--foreground)]">Nothing is waiting right now.</p>
             <p className="mt-2 text-sm leading-6 text-[var(--gray-mid)]">
               New updates will appear here when they need approval.

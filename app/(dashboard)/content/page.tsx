@@ -1,3 +1,5 @@
+import { workflowSetupError } from "@/lib/communications/repository";
+import { connectionStatus } from "@/lib/communications/config";
 import { ContentManagement } from "@/features/content/content-management";
 import { getDashboardData } from "@/lib/data/demo-store";
 import { requireSession } from "@/lib/auth/session";
@@ -9,11 +11,12 @@ export default async function ContentPage() {
   if (!canAccessRoute(session.role, "/content")) {
     redirect("/dashboard");
   }
-  const data = await getDashboardData(session);
+  const [data, setupError] = await Promise.all([getDashboardData(session), workflowSetupError()]);
   return (
     <div className="space-y-5">
-      <h1 className="font-display text-3xl font-black">Stories and communications</h1>
-      <ContentManagement updates={data.updates} generatedContent={data.generatedContent} />
+      <h1 className="font-display text-[28px] font-semibold">Communications</h1>
+      {setupError && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{setupError}</p>}
+      <ContentManagement updates={data.updates} generatedContent={data.generatedContent} canApprove={session.role === "admin"} aiMissing={connectionStatus().ai} />
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { UpdateHistory } from "@/features/updates/update-history";
+import { ViewTabs } from "@/components/ui/view-tabs";
 import { requireSession } from "@/lib/auth/session";
 import { getApprovalComments, getDashboardData } from "@/lib/data/demo-store";
 import { ApprovalQueue } from "@/features/updates/approval-queue";
@@ -14,16 +16,18 @@ export default async function UpdatesPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2 pl-16 lg:pl-0">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--primary)]">Field reporting</p>
-        <h1 className="font-display text-4xl font-black tracking-[-0.04em] sm:text-5xl">Project updates</h1>
+      <div className="space-y-2 ">
+        <p className="text-xs font-semibold tracking-normal text-[var(--primary)]">Field reporting</p>
+        <h1 className="font-display text-[28px] font-semibold tracking-[-0.025em] ">Project updates</h1>
         <p className="max-w-2xl text-sm leading-6 text-[var(--gray-mid)]">Record activity, outcomes, and supporting media in one clear update.</p>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-        <UpdateWizard projects={data.projects} vendors={data.vendors} defaultVendorId={vendor?.id} initialProjectId={projectId} />
-        <ApprovalQueue updates={data.updates} commentsByUpdate={commentsByUpdate} session={session} />
-      </div>
+      <ViewTabs firstLabel="New update" secondLabel={session.role === "vendor" ? "Previous updates" : `Review queue (${data.updates.filter(update => ["pending", "in_review", "revision_requested"].includes(update.status)).length})`}
+        first={<div className="max-w-3xl"><UpdateWizard projects={data.projects} vendors={data.vendors} defaultVendorId={vendor?.id} initialProjectId={projectId} /></div>}
+        second={session.role === "vendor" ? <UpdateHistory updates={data.updates} commentsByUpdate={commentsByUpdate} /> : <ApprovalQueue updates={data.updates} commentsByUpdate={commentsByUpdate} session={session} />}
+        thirdLabel={session.role === "vendor" ? undefined : "Update history"}
+        third={session.role === "vendor" ? undefined : <UpdateHistory updates={data.updates} commentsByUpdate={commentsByUpdate} />}
+      />
     </div>
   );
 }

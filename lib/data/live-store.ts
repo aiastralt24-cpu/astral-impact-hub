@@ -1,10 +1,10 @@
+import { isPlaceholder } from "@/lib/communications/model";
 import "server-only";
 
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { cache } from "react";
 
-import { AnthropicContentProvider } from "@/lib/ai/provider";
 import { computeProjectHealth, computeReadinessScore, computeVendorScore } from "@/lib/domain/scoring";
 import { getWorkspaceScope } from "@/lib/auth/scope";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -328,11 +328,12 @@ async function fetchDatabase(): Promise<DemoDatabase> {
   const userMap = new Map(users.map((user) => [user.id, user]));
 
   const updates: UpdateRecord[] = updateRows.map((row: any) => ({
+    updatedAt: row.updated_at,
     id: row.id,
     projectId: row.project_id,
     projectName: projectMap.get(row.project_id)?.name ?? "Unknown project",
     vendorId: row.vendor_id ?? "",
-    vendorName: vendorMap.get(row.vendor_id)?.name ?? "Unknown CSR Associate",
+    vendorName: row.vendor_id ? (vendorMap.get(row.vendor_id)?.name ?? "CSR Associate unavailable") : "Managed internally",
     submittedByUserId: row.submitted_by_user_id ?? "",
     happenedAt: row.happened_at,
     description: row.description,
@@ -376,7 +377,8 @@ async function fetchDatabase(): Promise<DemoDatabase> {
       id: row.id,
       updateId: row.update_id,
       projectName: update?.projectName ?? "Unknown project",
-      vendorName: update?.vendorName ?? "Unknown CSR Associate",
+      vendorName: update?.vendorName ?? "Attribution unavailable",
+      workflow: row.workflow?.revision ? row.workflow : undefined,
       emotionalHook: row.emotional_hook,
       instagramCaptionShort: row.instagram_caption_short,
       instagramCaptionLong: row.instagram_caption_long,
@@ -405,7 +407,11 @@ async function fetchDatabase(): Promise<DemoDatabase> {
     updateId: row.update_id,
     contentId: row.generated_content_id ?? "",
     channel: row.channel,
-    status: row.status,
+    providerMessageId: row.provider_message_id || undefined,
+    contentRevision: row.payload?.revision,
+    destination: row.payload?.destination,
+    idempotencyKey: row.idempotency_key || undefined,
+    status: row.provider_message_id || ["sending","failed","unknown"].includes(row.status) ? row.status : "unverified",
     message: row.payload?.message ?? row.status,
     createdAt: row.created_at
   }));
@@ -500,11 +506,16 @@ export async function getUserById(id: string) {
 }
 
 export async function getUserByCredentials(username: string, password: string) {
-  return (
-    (await fetchDatabase()).users.find(
-      (user) => user.username.toLowerCase() === username.trim().toLowerCase() && user.password === password
-    ) ?? null
-  );
+  const { hashPassword, isPasswordHash, verifyPassword } = await import("@/lib/auth/password");
+  const user = (await fetchDatabase()).users.find((entry) => entry.username.toLowerCase() === username.trim().toLowerCase());
+  if (!user || !(await verifyPassword(password, user.password))) return null;
+  if (!isPasswordHash(user.password)) {
+    const hashed = await hashPassword(password);
+    const { error } = await createServiceRoleClient().from("users").update({ password: hashed }).eq("id", user.id);
+    if (error) throw error;
+    user.password = hashed;
+  }
+  return user;
 }
 
 export async function createProject(input: Omit<ProjectRecord, "id" | "healthScore" | "readinessScore" | "vendorName" | "location">) {
@@ -690,6 +701,7 @@ export async function createWorkspaceUser(input: {
   assignedVendorIds: string[];
   managedByUserId: string;
 }) {
+  const { hashPassword } = await import("@/lib/auth/password");
   const supabase = createServiceRoleClient();
   const { data, error } = await supabase
     .from("users")
@@ -697,7 +709,7 @@ export async function createWorkspaceUser(input: {
       full_name: input.fullName,
       email: input.email,
       username: input.username,
-      password: input.password,
+      password: await hashPassword(input.password),
       role: input.role,
       assigned_project_ids: input.assignedProjectIds,
       assigned_vendor_ids: input.assignedVendorIds,
@@ -737,6 +749,7 @@ export async function updateWorkspaceUser(input: {
   assignedProjectIds: string[];
   assignedVendorIds: string[];
 }) {
+  const { hashPassword } = await import("@/lib/auth/password");
   const supabase = createServiceRoleClient();
   const existing = await getUserById(input.userId);
   if (!existing) return null;
@@ -746,7 +759,7 @@ export async function updateWorkspaceUser(input: {
       full_name: input.fullName,
       email: input.email,
       username: input.username,
-      password: input.password?.trim() ? input.password : existing.password,
+      password: input.password?.trim() ? await hashPassword(input.password) : existing.password,
       role: input.role,
       assigned_project_ids: input.assignedProjectIds,
       assigned_vendor_ids: input.assignedVendorIds
@@ -971,98 +984,6 @@ export async function recordApproval({
   } satisfies ApprovalRecord;
 }
 
-export async function generateContent(updateId: string) {
-  const supabase = createServiceRoleClient();
-  const db = await fetchDatabase();
-  const update = db.updates.find((entry) => entry.id === updateId);
-  const project = db.projects.find((entry) => entry.id === update?.projectId);
-  if (!update || !project) return null;
-
-  const existing = db.generatedContent.find((entry) => entry.updateId === updateId);
-  if (existing) return existing;
-
-  const provider = new AnthropicContentProvider();
-  const generated = await provider.generateContent({
-    projectContext: project.projectBrief ?? project.name,
-    updateData: JSON.stringify(update, null, 2),
-    campaignContext: project.emotionalTags.join(", "),
-    requestedOutputs: [
-      "emotionalHook",
-      "instagramCaptionShort",
-      "instagramCaptionLong",
-      "reelScript",
-      "carouselBreakdown",
-      "telegramUpdate",
-      "whatsappDigest",
-      "csrSummary"
-    ]
-  });
-
-  const { data, error } = await supabase
-    .from("generated_content")
-    .insert({
-      update_id: updateId,
-      prompt_version: "v1.0",
-      emotional_hook: generated.emotionalHook,
-      instagram_caption_short: generated.instagramCaptionShort,
-      instagram_caption_long: generated.instagramCaptionLong,
-      reel_script: generated.reelScript,
-      carousel_breakdown: generated.carouselBreakdown,
-      telegram_update: generated.telegramUpdate,
-      whatsapp_digest: generated.whatsappDigest,
-      csr_summary: generated.csrSummary
-    })
-    .select("*")
-    .single();
-  if (error) throw error;
-
-  return {
-    id: data.id,
-    updateId,
-    projectName: project.name,
-    vendorName: update.vendorName,
-    createdAt: data.created_at,
-    ...generated
-  } satisfies GeneratedContentRecord;
-}
-
-export async function distributeContent(request: DistributionRequestRecord) {
-  const supabase = createServiceRoleClient();
-  const generatedContent = (await fetchDatabase()).generatedContent.find((entry) => entry.id === request.contentId);
-  if (!generatedContent) return null;
-
-  const payload = {
-    message: `${request.channel} sharing ${request.channel === "telegram" ? "queued" : "prepared"} successfully`
-  };
-
-  const { data, error } = await supabase
-    .from("distribution_log")
-    .insert({
-      update_id: request.updateId,
-      generated_content_id: request.contentId,
-      channel: request.channel,
-      status: "sent",
-      payload
-    })
-    .select("*")
-    .single();
-  if (error) throw error;
-
-  if (request.channel === "telegram") {
-    await supabase.from("updates").update({ status: "published" }).eq("id", request.updateId);
-  }
-
-  return {
-    id: data.id,
-    updateId: request.updateId,
-    contentId: request.contentId,
-    channel: request.channel,
-    status: "sent",
-    message: payload.message,
-    createdAt: data.created_at
-  } satisfies DistributionLogRecord;
-}
-
 export async function getDashboardData(session?: AppUser): Promise<DashboardData> {
   const db = await fetchDatabase();
   const visible = filterDataForUser(db, session);
@@ -1081,14 +1002,14 @@ export async function getDashboardData(session?: AppUser): Promise<DashboardData
     },
     {
       label: "Prepared communication content",
-      value: `${visible.generatedContent.length}`,
-      trend: `${visible.generatedContent.filter((entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week`,
+      value: `${visible.generatedContent.filter(content => !isPlaceholder(content)).length}`,
+      trend: `${visible.generatedContent.filter((entry) => !isPlaceholder(entry) && new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week`,
       tone: "positive"
     },
     {
       label: "Content shared",
-      value: `${visible.distributionLog.length}`,
-      trend: `${visible.distributionLog.filter((entry) => entry.channel === "telegram").length} Telegram sends`,
+      value: `${visible.distributionLog.filter(entry => entry.providerMessageId && ["sent","delivered","read"].includes(entry.status)).length}`,
+      trend: `${visible.distributionLog.filter((entry) => entry.channel === "telegram" && entry.providerMessageId && entry.status === "sent").length} Telegram sends`,
       tone: "neutral"
     }
   ];

@@ -32,9 +32,9 @@ export default async function MediaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1 pl-16 lg:pl-0">
-        <p className="text-sm uppercase tracking-[0.26em] text-[var(--accent-blue)]">Media library</p>
-        <h1 className="font-display text-3xl font-black">Project media</h1>
+      <div className="space-y-1 ">
+        <p className="text-sm tracking-normal text-[var(--accent-blue)]">Media library</p>
+        <h1 className="font-display text-[28px] font-semibold">Project media</h1>
         <p className="text-sm text-[var(--gray-mid)]">
           {session.isSuperAdmin
             ? "All project media across the workspace."
@@ -45,7 +45,7 @@ export default async function MediaPage() {
       </div>
 
       {visibleMediaByProject.length === 0 ? (
-        <div className="glass-card rounded-[28px] p-6">
+        <div className="glass-card rounded-2xl p-6">
           <p className="font-medium text-[var(--foreground)]">No media available yet.</p>
           <p className="mt-2 text-sm text-[var(--gray-mid)]">Uploaded images and videos will appear here once updates include media.</p>
         </div>

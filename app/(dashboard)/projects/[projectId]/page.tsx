@@ -1,3 +1,4 @@
+import { UpdateHistory } from "@/features/updates/update-history";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProjectManagement } from "@/features/projects/project-management";
@@ -24,9 +25,21 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
   const complete = checklist.filter((item) => item.done).length;
   return <div className="space-y-5">
     <Link href="/projects" className="text-sm font-semibold text-[var(--primary)]">← Back to projects</Link>
-    <div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-display text-3xl font-black">Project details</h1><p className="mt-1 text-sm text-[var(--gray-mid)]">See what is complete and what the team should do next.</p></div><div className="flex gap-2"><Link href={`/updates?projectId=${project.id}`} className="inline-flex items-center gap-2 rounded-full bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"><FileText className="h-4 w-4" />Add update</Link><Link href="/media" className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold"><ImageIcon className="h-4 w-4" />Add media</Link></div></div>
-    <section className="rounded-2xl border border-[var(--border)] bg-white p-5"><div className="flex items-center justify-between gap-4"><div><h2 className="font-display text-lg font-bold">Project setup</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">{complete} of {checklist.length} essentials complete</p></div><OpenProjectEditor /></div><div className="mt-4 grid gap-2 sm:grid-cols-2">{checklist.map((item) => <div key={item.label} className="flex items-center gap-2 text-sm">{item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Circle className="h-4 w-4 text-slate-300" />}<span className={item.done ? "text-[var(--foreground)]" : "text-[var(--gray-mid)]"}>{item.label}</span></div>)}</div></section>
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-display text-[28px] font-semibold">{project.name}</h1><p className="mt-1 text-sm text-[var(--gray-mid)]">{project.location} · {project.status.replaceAll("_", " ")}</p></div><div className="flex gap-2"><Link href={`/updates?projectId=${project.id}`} className="inline-flex items-center gap-2 rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-semibold text-white"><FileText className="h-4 w-4" />Add update</Link><Link href={`/updates?projectId=${project.id}#photos-videos`} className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold"><ImageIcon className="h-4 w-4" />Add media update</Link></div></div>
+    <details className="rounded-xl border border-[var(--border)] bg-white px-5 py-3"><summary className="cursor-pointer text-sm font-medium">Project setup <span className="ml-2 font-normal text-[var(--gray-mid)]">{complete} of {checklist.length} complete</span></summary><div className="mt-4 grid gap-2 sm:grid-cols-2">{checklist.map((item) => <div key={item.label} className="flex items-center gap-2 text-sm">{item.done ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Circle className="h-4 w-4 text-slate-400" />}<span>{item.label}</span></div>)}</div><div className="mt-4"><OpenProjectEditor /></div></details>
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,1fr)]">
+    <div className="min-w-0 space-y-5">
     <ProjectManagement projects={[project]} vendors={data.vendors} managers={data.users.filter((user) => user.role === "admin" || user.role === "project_manager")} session={session} showCreate={false} />
-    <section className="rounded-2xl border border-[var(--border)] bg-white p-5"><h2 className="font-display text-xl font-bold">Recent updates</h2>{updates.length ? <div className="mt-3 space-y-3">{updates.slice(0,5).map((update)=><div key={update.id} className="rounded-xl bg-[#f8f9fc] p-4"><p className="text-sm font-medium">{update.description}</p><p className="mt-1 text-xs text-[var(--gray-mid)]">{update.happenedAt} · {update.media.length} media files</p></div>)}</div>:<div className="mt-3 rounded-xl bg-[#f8f9fc] p-4"><p className="text-sm text-[var(--gray-mid)]">No updates yet. Add the first update so the team can track progress.</p></div>}</section>
+    <UpdateHistory updates={updates} title="Project updates" showProject={false} />
+    </div>
+    <aside className="rounded-2xl border border-[var(--border)] bg-white p-5"><h2 className="text-base font-semibold">Project details</h2><dl className="mt-4 space-y-4 text-sm">{[
+      ["Status", project.status.replaceAll("_", " ")],
+      ["Managed by", project.vendorName || "Foundation team"],
+      ["Project manager", data.users.find(user => user.id === project.internalOwnerId)?.fullName || "Not assigned"],
+      ["Start date", project.startDate || "Not set"],
+      ["End date", project.endDate || "Not set"],
+      ["Updates", String(updates.length)]
+    ].map(([label, value]) => <div key={label}><dt className="text-xs text-[var(--gray-mid)]">{label}</dt><dd className="mt-1 capitalize">{value}</dd></div>)}</dl></aside>
+    </div>
   </div>;
 }

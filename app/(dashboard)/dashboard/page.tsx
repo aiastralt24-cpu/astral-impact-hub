@@ -1,9 +1,11 @@
+import { contentReady } from "@/lib/communications/model";
 import { AlertTriangle, ClipboardCheck, FolderOpen, Send } from "lucide-react";
 import Link from "next/link";
 
 import { requireSession } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/data/demo-store";
 import type { ProjectRecord } from "@/types/domain";
+import { projectNeedsAttention } from "@/lib/domain/scoring";
 
 const statusLabels: Record<ProjectRecord["status"], string> = {
   active: "Active",
@@ -47,21 +49,23 @@ export default async function DashboardPage() {
   const session = await requireSession();
   const data = await getDashboardData(session);
   const updatesToReview = data.updates.filter((update) => ["pending", "in_review", "revision_requested"].includes(update.status)).length;
-  const projectsNeedingAttention = data.projects.filter((project) => project.healthScore < 45 || project.status === "at_risk");
-  const otherProjects = data.projects.filter((project) => project.healthScore >= 45 && project.status !== "at_risk");
+  const projectsNeedingAttention = data.projects.filter(projectNeedsAttention);
+  const otherProjects = data.projects.filter((project) => !projectNeedsAttention(project));
+  const latestActivity = data.updates.map((update) => update.updatedAt || update.createdAt).sort().at(-1);
 
   const summary = [
     { label: "Projects", value: data.projects.length, icon: FolderOpen, tone: "blue" },
     { label: "Updates to review", value: updatesToReview, icon: ClipboardCheck, tone: "amber" },
-    { label: "Content ready to share", value: data.generatedContent.length, icon: Send, tone: "green" },
+    { label: "Content ready to share", value: data.generatedContent.filter(contentReady).length, icon: Send, tone: "green" },
     { label: "Projects needing attention", value: projectsNeedingAttention.length, icon: AlertTriangle, tone: "rose" }
   ] as const;
 
   return (
     <div className="space-y-7">
-      <header className="pl-16 lg:pl-0">
-        <h1 className="font-display text-3xl font-black tracking-[-0.04em] text-[var(--foreground)]">Dashboard</h1>
+      <header className="">
+        <h1 className="font-display text-[28px] font-semibold tracking-[-0.025em] text-[var(--foreground)]">Dashboard</h1>
         <p className="mt-2 text-[var(--gray-mid)]">Here&apos;s what needs your attention today.</p>
+        <p className="mt-1 text-xs text-[var(--gray-mid)]">{latestActivity ? `Data through ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(new Date(latestActivity))}` : "No project updates recorded yet"}</p>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Dashboard summary">
@@ -78,7 +82,7 @@ export default async function DashboardPage() {
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTone}`}><Icon className="h-5 w-5" /></div>
               <div>
                 <p className="text-sm text-[var(--gray-mid)]">{item.label}</p>
-                <p className="mt-1 text-2xl font-bold text-[var(--foreground)]">{item.value}</p>
+                <p className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{item.value}</p>
               </div>
             </div>
           );
@@ -87,7 +91,7 @@ export default async function DashboardPage() {
 
       <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
         <div className="border-b border-[var(--border)] px-5 py-4">
-          <h2 className="font-display text-lg font-bold text-[var(--foreground)]">Projects needing attention</h2>
+          <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">Projects needing attention</h2>
           <p className="mt-1 text-sm text-[var(--gray-mid)]">Projects that need a new update or team follow-up.</p>
         </div>
         <ProjectTable projects={projectsNeedingAttention} emptyMessage="No projects need attention right now." />
@@ -96,7 +100,7 @@ export default async function DashboardPage() {
       {otherProjects.length > 0 ? (
         <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white">
           <div className="border-b border-[var(--border)] px-5 py-4">
-            <h2 className="font-display text-lg font-bold text-[var(--foreground)]">All other projects</h2>
+            <h2 className="font-display text-lg font-semibold text-[var(--foreground)]">All other projects</h2>
           </div>
           <ProjectTable projects={otherProjects} emptyMessage="No other projects to show." />
         </section>

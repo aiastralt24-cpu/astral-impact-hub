@@ -226,9 +226,9 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
   }
 
   return (
-    <section className="overflow-hidden rounded-[24px] border border-[var(--border)] bg-white shadow-[0_12px_34px_rgba(17,24,39,0.05)]">
+    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-sm">
       <div className="border-b border-[var(--border)] px-5 py-5 sm:px-6">
-        <div className="flex items-center justify-between gap-4"><div><h2 className="font-display text-xl font-black text-[var(--foreground)]">New update</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">Complete the essentials, then add supporting detail if needed.</p></div><span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-[var(--primary)]">Draft</span></div>
+        <div className="flex items-center justify-between gap-4"><div><h2 className="font-display text-xl font-semibold text-[var(--foreground)]">New update</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">Complete the essentials, then add supporting detail if needed.</p></div><span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-[var(--primary)]">Draft</span></div>
       </div>
 
       <div className="space-y-5 p-5 sm:p-6">
@@ -274,11 +274,11 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
           </div>
         </fieldset>
 
-        <div>
+        <div id="photos-videos" className="scroll-mt-6">
           <p className="mb-2 text-sm font-semibold text-[var(--foreground)]">People or outcomes reached</p>
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
-            <input value={reachCount} onChange={(event) => setReachCount(event.target.value)} type="number" min="0" step="1" inputMode="numeric" placeholder="Whole number" className="h-12 rounded-xl px-4" />
-            <select value={reachType} onChange={(event) => setReachType(event.target.value)} className="h-12 rounded-xl px-4">
+            <input aria-label="Number reached" value={reachCount} onChange={(event) => setReachCount(event.target.value)} type="number" min="0" step="1" inputMode="numeric" placeholder="Whole number" className="h-12 rounded-xl px-4" />
+            <select aria-label="Outcome type" value={reachType} onChange={(event) => setReachType(event.target.value)} className="h-12 rounded-xl px-4">
               <option>People</option><option>Animals</option><option>Hectares of land</option><option>Litres of water</option><option>Other</option>
             </select>
           </div>
@@ -373,7 +373,7 @@ export function UpdateWizard({ projects, vendors, defaultVendorId, initialProjec
           <button type="button" onClick={() => saveDraft(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-white px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-slate-50">
             <Save className="h-4 w-4" /> Save for later
           </button>
-          <button type="button" disabled={isSubmitting} onClick={submitUpdate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,89,255,0.2)] disabled:opacity-60">
+          <button type="button" disabled={isSubmitting} onClick={submitUpdate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-sm disabled:opacity-60">
             <Send className="h-4 w-4" /> {isSubmitting ? "Submitting..." : "Submit update"}
           </button>
         </div>

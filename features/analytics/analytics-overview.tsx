@@ -1,58 +1,18 @@
+import { Badge } from "@/components/ui/badge";
 import type { DistributionLogRecord, MetricTile, ProjectRecord, UpdateRecord, VendorRecord } from "@/types/domain";
 
-type AnalyticsOverviewProps = {
-  metrics: MetricTile[];
-  projects: ProjectRecord[];
-  vendors: VendorRecord[];
-  updates: UpdateRecord[];
-  distributionLog: DistributionLogRecord[];
-};
-
+type AnalyticsOverviewProps = { metrics: MetricTile[]; projects: ProjectRecord[]; vendors: VendorRecord[]; updates: UpdateRecord[]; distributionLog: DistributionLogRecord[] };
+const statusLabels = { draft: "Draft", pending: "Pending review", in_review: "In review", revision_requested: "Changes requested", approved: "Approved", rejected: "Rejected", published: "Published" };
 export function AnalyticsOverview({ metrics, projects, vendors, updates, distributionLog }: AnalyticsOverviewProps) {
-  const activeProjects = projects.filter((project) => project.status === "active").length;
-  const averageVendorScore = Math.round(vendors.reduce((sum, vendor) => sum + vendor.score, 0) / Math.max(vendors.length, 1));
-  const averageReadiness = Math.round(updates.reduce((sum, update) => sum + update.readinessScore, 0) / Math.max(updates.length, 1));
-
-  return (
-    <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="glass-card rounded-[28px] p-5">
-            <p className="text-sm text-[var(--gray-mid)]">{metric.label}</p>
-            <p className="font-display mt-3 text-4xl font-black text-[var(--foreground)]">{metric.value}</p>
-            <p className="mt-2 text-sm text-[var(--gray-mid)]">{metric.trend}</p>
-          </div>
-        ))}
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-3">
-        <div className="glass-card rounded-[28px] p-6 xl:col-span-2">
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Update status</p>
-          <div className="mt-4 space-y-3">
-            {updates.map((update) => (
-              <div key={update.id} className="flex items-center justify-between rounded-3xl bg-[#f8f9fc] p-4 text-sm ring-1 ring-[var(--border)]">
-                <div>
-                  <p className="font-medium text-[var(--foreground)]">{update.projectName}</p>
-                  <p className="text-[var(--gray-mid)]">{update.vendorName}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-[var(--foreground)]">Content readiness {update.readinessScore}</p>
-                  <p className="text-[var(--gray-mid)]">{update.status}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="glass-card rounded-[28px] p-6">
-          <p className="text-sm uppercase tracking-[0.25em] text-[var(--accent-blue)]">Management overview</p>
-          <div className="mt-4 space-y-3 text-sm">
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Active projects: {activeProjects}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Average CSR Associate performance: {averageVendorScore}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Average content readiness: {averageReadiness}</div>
-            <div className="rounded-3xl bg-[#f8f9fc] p-4 ring-1 ring-[var(--border)] text-[var(--foreground)]">Total content shared: {distributionLog.length}</div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
+  const activeProjects = projects.filter(project => project.status === "active").length;
+  const averageVendorScore = vendors.length ? Math.round(vendors.reduce((sum, vendor) => sum + vendor.score, 0) / vendors.length) : null;
+  const averageReadiness = updates.length ? Math.round(updates.reduce((sum, update) => sum + update.readinessScore, 0) / updates.length) : null;
+  const ordered = [...updates].sort((a,b) => b.happenedAt.localeCompare(a.happenedAt));
+  const latestActivity = updates.map(update => update.updatedAt || update.createdAt).sort().at(-1);
+  return <div className="space-y-5">
+    <p className="text-sm text-[var(--gray-mid)]">Workspace snapshot · All available updates{latestActivity ? ` · Data through ${new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(new Date(latestActivity))}` : ""}</p>
+    <section aria-label="Reporting metrics" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(metric => <div key={metric.label} className="glass-card rounded-2xl p-5"><p className="text-xs text-[var(--gray-mid)]">{metric.label}</p><p className="mt-2 text-[28px] font-semibold tracking-tight tabular-nums">{metric.value}</p><p className="mt-1 text-xs text-[var(--gray-mid)]">{metric.trend}</p></div>)}</section>
+    <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white"><header className="flex flex-wrap items-center justify-between gap-3 p-5"><div><h2 className="text-lg font-semibold">Update status</h2><p className="mt-1 text-sm text-[var(--gray-mid)]">Recent activity, review decisions, and content readiness.</p></div><span className="text-xs text-[var(--gray-mid)]">{updates.length} updates</span></header><div className="overflow-x-auto"><table className="data-table min-w-[680px]"><caption className="sr-only">Project update reporting status</caption><thead><tr><th scope="col">Project / update</th><th scope="col">Date</th><th scope="col">Review status</th><th scope="col">Readiness</th></tr></thead><tbody>{ordered.map(update => <tr key={update.id}><td className="max-w-md"><p className="font-medium">{update.projectName}</p><p className="mt-1 text-xs text-[var(--gray-mid)]">{update.vendorName}</p><p className="mt-2 line-clamp-2 text-xs text-[var(--gray-mid)]">{update.description}</p></td><td className="whitespace-nowrap text-xs">{update.happenedAt}</td><td><Badge variant={update.status === "approved" || update.status === "published" ? "approved" : update.status === "rejected" ? "rejected" : "pending"}>{statusLabels[update.status]}</Badge></td><td><span className="font-medium tabular-nums">{update.readinessScore}<span className="font-normal text-[var(--gray-mid)]">/100</span></span><progress aria-label={`Readiness for ${update.projectName}`} max={100} value={update.readinessScore} className="mt-2 block h-1.5 w-20 accent-[var(--primary)]" /></td></tr>)}{!updates.length && <tr><td colSpan={4} className="text-center text-[var(--gray-mid)]">No updates available yet.</td></tr>}</tbody></table></div><details className="border-t border-[var(--border)] px-5 py-3 text-xs text-[var(--gray-mid)]"><summary className="cursor-pointer font-medium">How readiness is calculated</summary><p className="mt-2 max-w-3xl leading-5">The score is out of 100: description (up to 30), impact explanation (15), highlight (10), quote (10), media (up to 20), social suitability (10), and reported progress of at least 50% (5). It measures content completeness, not project impact.</p></details></section>
+    <section aria-label="Management overview" className="grid gap-4 rounded-2xl border border-[var(--border)] bg-white p-5 sm:grid-cols-2 xl:grid-cols-4">{[["Active projects", activeProjects], ["Average associate score", averageVendorScore === null ? "—" : `${averageVendorScore}/100`], ["Average readiness", averageReadiness === null ? "—" : `${averageReadiness}/100`], ["Content shared", distributionLog.filter(log => log.providerMessageId && ["sent","delivered","read"].includes(log.status)).length]].map(([label, value]) => <div key={label}><p className="text-xs text-[var(--gray-mid)]">{label}</p><p className="mt-1 text-lg font-semibold tabular-nums">{value}</p></div>)}</section>
+  </div>;
 }

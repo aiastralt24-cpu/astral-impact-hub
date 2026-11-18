@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/session";
-import { getDashboardData, updateVendor } from "@/lib/data/demo-store";
+import { getDashboardData, updateVendor, updateWorkspaceUser } from "@/lib/data/demo-store";
 
 export async function updateOwnProfileAction(formData: FormData) {
   const session = await requireSession();
@@ -37,4 +37,28 @@ export async function updateOwnProfileAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/vendors");
   redirect("/profile?saved=1");
+}
+
+export async function changeOwnPasswordAction(formData: FormData) {
+  const session = await requireSession();
+  if (session.role !== "vendor") redirect("/dashboard");
+  const currentPassword = String(formData.get("currentPassword") ?? "");
+  const newPassword = String(formData.get("newPassword") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  if (currentPassword !== session.password) redirect("/profile?passwordError=current-password");
+  if (newPassword.length < 10) redirect("/profile?passwordError=length");
+  if (newPassword !== confirmPassword) redirect("/profile?passwordError=mismatch");
+
+  await updateWorkspaceUser({
+    userId: session.id,
+    fullName: session.fullName,
+    email: session.email,
+    username: session.username,
+    password: newPassword,
+    role: session.role,
+    assignedProjectIds: session.assignedProjectIds,
+    assignedVendorIds: session.assignedVendorIds
+  });
+  revalidatePath("/profile");
+  redirect("/profile?passwordSaved=1");
 }

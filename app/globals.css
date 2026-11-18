@@ -1,16 +1,24 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   --brand-blue: #0059ff;
-  --font-display: "Plus Jakarta Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Inter", "Segoe UI", sans-serif;
   --font-body: "Inter", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
   --background: #eef2f6;
   --foreground: #121a27;
-  --muted-foreground: rgba(68, 84, 106, 0.72);
+  --muted-foreground: #647084;
   --card: rgba(255, 255, 255, 0.82);
   --card-foreground: #121a27;
-  --border: rgba(18, 26, 39, 0.08);
+  --border: #e3e7ed;
   --primary: #0059ff;
   --primary-mid: #4b88ff;
   --primary-light: rgba(0, 89, 255, 0.08);
@@ -19,9 +27,9 @@
   --amber: #b7791f;
   --red: #d4556b;
   --teal: #2ea6a6;
-  --gray-mid: rgba(68, 84, 106, 0.78);
+  --gray-mid: #647084;
   --shadow-glow: 0 18px 48px rgba(17, 24, 39, 0.08);
-  --radius: 24px;
+  --radius: 16px;
 }
 
 * {
@@ -35,12 +43,11 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 15% 18%, rgba(126, 142, 255, 0.12), transparent 0, transparent 25%),
-    radial-gradient(circle at 88% 82%, rgba(150, 184, 255, 0.1), transparent 0, transparent 23%),
-    linear-gradient(180deg, #f4f7fb 0%, #eef2f6 48%, #e9edf4 100%);
+  background: #f6f7f9;
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -98,36 +105,14 @@ input[type="range"] {
   color: #121a27;
 }
 
-.glass-panel {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(251, 252, 255, 0.84)),
-    rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(18, 26, 39, 0.06);
-  box-shadow: var(--shadow-glow);
-  backdrop-filter: blur(20px) saturate(120%);
-}
-
+.glass-panel,
 .glass-card {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 253, 0.88)),
-    rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(18, 26, 39, 0.06);
-  box-shadow: 0 12px 34px rgba(17, 24, 39, 0.07);
-  backdrop-filter: blur(18px) saturate(120%);
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.025);
 }
 
-.section-shell {
-  position: relative;
-  overflow: hidden;
-}
-
-.section-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.44), transparent 38%, rgba(93, 99, 255, 0.04));
-  pointer-events: none;
-}
+.section-shell { position: relative; overflow: hidden; }
 
 .eyebrow {
   color: rgba(93, 99, 255, 0.78);
@@ -235,3 +220,20 @@ input[type="range"] {
     opacity: 0.75;
   }
 }
+
+/* Shared interaction and data presentation primitives. */
+a, button, summary, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button, summary { cursor: pointer; }
+:where(a, button, summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { border-radius: 8px; }
+input::placeholder, textarea::placeholder { color: #7c8798; }
+.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+.data-table th { padding: 12px 20px; background: #fafbfc; color: #647084; font-size: 12px; font-weight: 500; }
+.data-table td { padding: 16px 20px; border-top: 1px solid var(--border); vertical-align: top; }
+.data-table tbody tr:hover { background: #fafbfc; }
+.drawer { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(100%, 560px); max-width: 100%; height: 100dvh; max-height: 100dvh; border: 0; padding: 0; background: white; color: var(--foreground); box-shadow: -12px 0 48px #121a2718; }
+.drawer::backdrop { background: #121a2760; backdrop-filter: blur(2px); }
+.drawer[open] { display: flex; flex-direction: column; }
+@media (max-width: 640px) { input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; } }
+
+body:has(dialog[open]) { overflow: hidden; }

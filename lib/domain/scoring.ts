@@ -36,6 +36,10 @@ export function computeProjectHealth(project: ProjectRecord, updates: UpdateReco
   return Math.max(0, Math.min(100, Math.round(readinessAverage * 0.6 + freshnessBonus - pendingPenalty + 20)));
 }
 
+export function projectNeedsAttention(project: ProjectRecord) {
+  return project.healthScore < 45 || project.status === "at_risk";
+}
+
 export function computeVendorScore(vendor: VendorRecord, updates: UpdateRecord[]) {
   const vendorUpdates = updates.filter((update) => update.vendorId === vendor.id);
   if (vendorUpdates.length === 0) {

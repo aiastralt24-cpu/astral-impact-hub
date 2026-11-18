@@ -1,10 +1,10 @@
+import { isPlaceholder } from "@/lib/communications/model";
 import "server-only";
 
 import { cache } from "react";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { AnthropicContentProvider } from "@/lib/ai/provider";
 import { hasSupabaseBackend } from "@/lib/env";
 import * as liveStore from "@/lib/data/live-store";
 import { computeProjectHealth, computeReadinessScore, computeVendorScore } from "@/lib/domain/scoring";
@@ -338,11 +338,15 @@ export async function getUserByCredentials(username: string, password: string) {
   if (hasSupabaseBackend) {
     return liveStore.getUserByCredentials(username, password);
   }
-  return (
-    getDb().users.find(
-      (user) => user.username.toLowerCase() === username.trim().toLowerCase() && user.password === password
-    ) ?? null
-  );
+  const { hashPassword, isPasswordHash, verifyPassword } = await import("@/lib/auth/password");
+  const db = getDb();
+  const user = db.users.find((entry) => entry.username.toLowerCase() === username.trim().toLowerCase());
+  if (!user || !(await verifyPassword(password, user.password))) return null;
+  if (!isPasswordHash(user.password)) {
+    user.password = await hashPassword(password);
+    saveDb(db);
+  }
+  return user;
 }
 
 export async function createProject(input: Omit<ProjectRecord, "id" | "healthScore" | "readinessScore" | "vendorName" | "location">) {
@@ -532,12 +536,13 @@ export async function createWorkspaceUser(input: {
     return liveStore.createWorkspaceUser(input);
   }
   const db = getDb();
+  const { hashPassword } = await import("@/lib/auth/password");
   const user: AppUser = {
     id: crypto.randomUUID(),
     fullName: input.fullName,
     email: input.email,
     username: input.username,
-    password: input.password,
+    password: await hashPassword(input.password),
     role: input.role,
     assignedProjectIds: input.assignedProjectIds,
     assignedVendorIds: input.assignedVendorIds,
@@ -584,12 +589,13 @@ export async function updateWorkspaceUser(input: {
   }
 
   const existing = db.users[index];
+  const { hashPassword } = await import("@/lib/auth/password");
   db.users[index] = {
     ...existing,
     fullName: input.fullName,
     email: input.email,
     username: input.username,
-    password: input.password?.trim() ? input.password : existing.password,
+    password: input.password?.trim() ? await hashPassword(input.password) : existing.password,
     role: input.role,
     assignedProjectIds: input.assignedProjectIds,
     assignedVendorIds: input.assignedVendorIds
@@ -824,83 +830,6 @@ export async function recordApproval({
   return approval;
 }
 
-export async function generateContent(updateId: string) {
-  if (hasSupabaseBackend) {
-    return liveStore.generateContent(updateId);
-  }
-  const db = getDb();
-  const update = db.updates.find((entry) => entry.id === updateId);
-  const project = db.projects.find((entry) => entry.id === update?.projectId);
-
-  if (!update || !project) {
-    return null;
-  }
-
-  const existing = db.generatedContent.find((entry) => entry.updateId === updateId);
-  if (existing) {
-    return existing;
-  }
-
-  const provider = new AnthropicContentProvider();
-  const generated = await provider.generateContent({
-    projectContext: project.projectBrief ?? project.name,
-    updateData: JSON.stringify(update, null, 2),
-    campaignContext: project.emotionalTags.join(", "),
-    requestedOutputs: [
-      "emotionalHook",
-      "instagramCaptionShort",
-      "instagramCaptionLong",
-      "reelScript",
-      "carouselBreakdown",
-      "telegramUpdate",
-      "whatsappDigest",
-      "csrSummary"
-    ]
-  });
-
-  const content: GeneratedContentRecord = {
-    id: crypto.randomUUID(),
-    updateId,
-    projectName: project.name,
-    vendorName: update.vendorName,
-    ...generated,
-    createdAt: new Date().toISOString()
-  };
-
-  db.generatedContent.unshift(content);
-  saveDb(db);
-  return content;
-}
-
-export async function distributeContent(request: DistributionRequestRecord) {
-  if (hasSupabaseBackend) {
-    return liveStore.distributeContent(request);
-  }
-  const db = getDb();
-  const generatedContent = db.generatedContent.find((entry) => entry.id === request.contentId);
-  const update = db.updates.find((entry) => entry.id === request.updateId);
-  if (!generatedContent || !update) {
-    return null;
-  }
-
-  const log: DistributionLogRecord = {
-    id: crypto.randomUUID(),
-    updateId: request.updateId,
-    contentId: request.contentId,
-    channel: request.channel,
-    status: "sent",
-    message: `${request.channel} sharing ${request.channel === "telegram" ? "queued" : "prepared"} successfully`,
-    createdAt: new Date().toISOString()
-  };
-
-  db.distributionLog.unshift(log);
-  if (request.channel === "telegram") {
-    update.status = "published";
-  }
-  saveDb(db);
-  return log;
-}
-
 export async function getDashboardData(session?: AppUser): Promise<DashboardData> {
   if (hasSupabaseBackend) {
     return liveStore.getDashboardData(session);
@@ -925,14 +854,14 @@ export async function getDashboardData(session?: AppUser): Promise<DashboardData
     },
     {
       label: "Prepared communication content",
-      value: `${visible.generatedContent.length}`,
-      trend: `${visible.generatedContent.filter((entry) => new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week`,
+      value: `${visible.generatedContent.filter(content => !isPlaceholder(content)).length}`,
+      trend: `${visible.generatedContent.filter((entry) => !isPlaceholder(entry) && new Date(entry.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} this week`,
       tone: "positive"
     },
     {
       label: "Content shared",
-      value: `${visible.distributionLog.length}`,
-      trend: `${visible.distributionLog.filter((entry) => entry.channel === "telegram").length} Telegram sends`,
+      value: `${visible.distributionLog.filter(entry => entry.providerMessageId && ["sent","delivered","read"].includes(entry.status)).length}`,
+      trend: `${visible.distributionLog.filter((entry) => entry.channel === "telegram" && entry.providerMessageId && entry.status === "sent").length} Telegram sends`,
       tone: "neutral"
     }
   ];
@@ -1026,4 +955,12 @@ function filterDataForUser(db: DemoDatabase, session?: AppUser) {
     generatedContent,
     distributionLog
   };
+}
+
+// Server-only access for the local communications repository.
+export const getLocalWorkflowDb = getDb;
+export function persistLocalWorkflowDb(db: ReturnType<typeof getDb>) {
+  if (!CAN_PERSIST_DEMO_DB) throw new Error("A durable database is required for communications in production.");
+  ensureDemoDbDirectory();
+  writeFileSync(DEMO_DB_PATH, JSON.stringify(db, null, 2));
 }
