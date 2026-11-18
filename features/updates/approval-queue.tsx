@@ -2,7 +2,7 @@ import { approvalAction } from "@/features/updates/actions";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import type { AppUser, ApprovalComment, UpdateRecord } from "@/types/domain";
-import { CalendarDays, Check, ImageIcon, RotateCcw, X } from "lucide-react";
+import { CalendarDays, Check, ExternalLink, ImageIcon, RotateCcw, X } from "lucide-react";
 
 type ApprovalQueueProps = {
   updates: UpdateRecord[];
@@ -19,6 +19,38 @@ const badgeMap = {
   published: "published",
   draft: "neutral"
 } as const;
+
+function ReviewMedia({ update }: { update: UpdateRecord }) {
+  if (!update.media.length) return null;
+  return <section className="mt-5" aria-label={`Media for ${update.projectName}`}>
+    <div className="mb-3 flex items-center justify-between gap-3"><h4 className="text-sm font-semibold text-[var(--foreground)]">Photos and videos</h4><span className="text-xs text-[var(--gray-mid)]">Click a file to open it</span></div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{update.media.map(media => {
+      const source = `/api/media/${media.id}`;
+      return <a key={media.id} href={source} target="_blank" rel="noreferrer" className="group overflow-hidden rounded-xl border border-[var(--border)] bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]" aria-label={`Open ${media.name}`}>
+        {media.mimeType.startsWith("video/") ? <video src={source} muted playsInline preload="metadata" className="aspect-video w-full bg-slate-950 object-cover" /> : <img src={source} alt={media.caption || media.name} loading="lazy" className="aspect-video w-full bg-slate-100 object-cover transition-transform group-hover:scale-[1.02]" />}
+        <span className="flex items-center justify-between gap-2 px-3 py-2 text-xs"><span className="truncate font-medium text-[var(--foreground)]">{media.caption || media.name}</span><ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--gray-mid)]" /></span>
+      </a>;
+    })}</div>
+  </section>;
+}
+
+function UpdateDetails({ update }: { update: UpdateRecord }) {
+  const details = [
+    ["People or outcomes reached", update.beneficiariesCount !== undefined ? `${update.beneficiariesCount} ${update.beneficiaryType || ""}`.trim() : "Not provided"],
+    ["Work duration", update.workDuration || "Not provided"],
+    ["Why it matters", update.whyItMatters || "Not provided"],
+    ["Highlight moment", update.highlightMoment || "Not provided"],
+    ["Quote", update.quote || "Not provided"],
+    ["Challenges", update.challenges || "Not provided"],
+    ["Next steps", update.nextSteps || "Not provided"]
+  ];
+  const flags = [update.socialMediaWorthy && "Suitable for social media", update.urgent && "Urgent", update.documentationOnly && "Documentation only", update.sensitiveContent && "Sensitive content"].filter((flag): flag is string => Boolean(flag));
+  return <section className="mt-5 rounded-xl border border-[var(--border)] bg-[#f8f9fc] p-4 sm:p-5" aria-label="Submitted update details">
+    <h4 className="text-sm font-semibold text-[var(--foreground)]">Submitted details</h4>
+    <dl className="mt-4 grid gap-4 sm:grid-cols-2">{details.map(([label, value]) => <div key={label} className={String(value).length > 80 ? "sm:col-span-2" : ""}><dt className="text-xs font-medium text-[var(--gray-mid)]">{label}</dt><dd className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--foreground)]">{value}</dd></div>)}</dl>
+    {flags.length ? <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">{flags.map(flag => <span key={flag} className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[var(--foreground)] ring-1 ring-[var(--border)]">{flag}</span>)}</div> : null}
+  </section>;
+}
 
 export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQueueProps) {
   const visibleUpdates = updates.filter((update) =>
@@ -100,6 +132,9 @@ export function ApprovalQueue({ updates, commentsByUpdate, session }: ApprovalQu
                 <span className="rounded-lg bg-slate-100 px-3 py-2"><span className="text-[var(--gray-mid)]">Progress</span> <strong className="ml-1">{update.progressPercent}%</strong></span>
                 <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2"><ImageIcon className="h-3.5 w-3.5 text-[var(--gray-mid)]" /><strong>{update.media.length}</strong> files</span>
               </div>
+
+              <ReviewMedia update={update} />
+              <UpdateDetails update={update} />
 
               {commentsByUpdate[update.id]?.length ? (
                 <div className="mt-4 rounded-xl bg-amber-50 p-4">

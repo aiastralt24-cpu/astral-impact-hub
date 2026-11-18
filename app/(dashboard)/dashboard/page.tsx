@@ -54,10 +54,10 @@ export default async function DashboardPage() {
   const latestActivity = data.updates.map((update) => update.updatedAt || update.createdAt).sort().at(-1);
 
   const summary = [
-    { label: "Projects", value: data.projects.length, icon: FolderOpen, tone: "blue" },
-    { label: "Updates to review", value: updatesToReview, icon: ClipboardCheck, tone: "amber" },
-    { label: "Content ready to share", value: data.generatedContent.filter(contentReady).length, icon: Send, tone: "green" },
-    { label: "Projects needing attention", value: projectsNeedingAttention.length, icon: AlertTriangle, tone: "rose" }
+    { label: "Projects", value: data.projects.length, icon: FolderOpen, tone: "blue", href: "/projects" },
+    { label: "Updates to review", value: updatesToReview, icon: ClipboardCheck, tone: "amber", href: "/updates?view=review" },
+    { label: "Content ready to share", value: data.generatedContent.filter(contentReady).length, icon: Send, tone: "green", href: "/content" },
+    { label: "Projects needing attention", value: projectsNeedingAttention.length, icon: AlertTriangle, tone: "rose", href: "/projects?attention=1" }
   ] as const;
 
   return (
@@ -78,13 +78,13 @@ export default async function DashboardPage() {
             rose: "bg-rose-50 text-rose-700"
           }[item.tone];
           return (
-            <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-white px-5 py-4">
+            <Link aria-label={`${item.label}: ${item.value}`} href={item.href} key={item.label} className="group flex items-center gap-4 rounded-2xl border border-[var(--border)] bg-white px-5 py-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTone}`}><Icon className="h-5 w-5" /></div>
               <div>
                 <p className="text-sm text-[var(--gray-mid)]">{item.label}</p>
                 <p className="mt-1 text-2xl font-semibold text-[var(--foreground)]">{item.value}</p>
               </div>
-            </div>
+            </Link>
           );
         })}
       </section>

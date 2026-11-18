@@ -36,6 +36,10 @@ New employee and CSR Associate accounts can receive a welcome email containing t
 
 Account creation remains successful when email delivery fails; the portal displays a warning so the creator can correct the email configuration without recreating the account. CSR Associates can replace their temporary password from **My Profile** after signing in.
 
+## Login sessions
+
+Apply `supabase/migrations/0008_single_active_session.sql` before deploying this release. Each account can have one active browser/device session. A second login is rejected until the active user signs out or the session reaches 30 minutes of inactivity. Explicit sign-out releases the account immediately.
+
 ## Project structure
 - `app/` routes, layouts, API entry points
 - `components/` shared UI and shell

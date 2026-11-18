@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireSession } from "@/lib/auth/session";
 import { getDashboardData, updateVendor, updateWorkspaceUser } from "@/lib/data/demo-store";
+import { verifyPassword } from "@/lib/auth/password";
 
 export async function updateOwnProfileAction(formData: FormData) {
   const session = await requireSession();
@@ -45,7 +46,7 @@ export async function changeOwnPasswordAction(formData: FormData) {
   const currentPassword = String(formData.get("currentPassword") ?? "");
   const newPassword = String(formData.get("newPassword") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  if (currentPassword !== session.password) redirect("/profile?passwordError=current-password");
+  if (!(await verifyPassword(currentPassword, session.password))) redirect("/profile?passwordError=current-password");
   if (newPassword.length < 10) redirect("/profile?passwordError=length");
   if (newPassword !== confirmPassword) redirect("/profile?passwordError=mismatch");
 

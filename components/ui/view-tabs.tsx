@@ -1,7 +1,7 @@
 "use client";
 import { useId, useState, type ReactNode } from "react";
-export function ViewTabs({ firstLabel, secondLabel, first, second, thirdLabel, third }: { firstLabel: string; secondLabel: string; first: ReactNode; second: ReactNode; thirdLabel?: string; third?: ReactNode }) {
-  const [selected, setSelected] = useState(0);
+export function ViewTabs({ firstLabel, secondLabel, first, second, thirdLabel, third, initialTab = 0 }: { firstLabel: string; secondLabel: string; first: ReactNode; second: ReactNode; thirdLabel?: string; third?: ReactNode; initialTab?: number }) {
+  const [selected, setSelected] = useState(initialTab);
   const id = useId();
   const labels = thirdLabel ? [firstLabel, secondLabel, thirdLabel] : [firstLabel, secondLabel];
   const panels = thirdLabel ? [first, second, third] : [first, second];

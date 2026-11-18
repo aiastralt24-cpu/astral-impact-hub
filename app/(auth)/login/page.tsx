@@ -15,6 +15,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (session) {
     redirect("/dashboard");
   }
+  const errorMessages: Record<string, string> = {
+    missing_fields: "Enter both your user ID and password.",
+    invalid_credentials: "The user ID or password is incorrect. Check both fields and try again.",
+    already_active: "This account is already signed in on another device or browser. Sign out there first, or wait 30 minutes after it becomes inactive.",
+    session_expired: "Your session expired after inactivity. Please sign in again.",
+    system_error: "We could not sign you in right now. Please try again in a moment or contact the administrator."
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
@@ -45,6 +52,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   <span className="mb-2 block text-sm font-medium text-[var(--gray-mid)]">User ID</span>
                   <input
                     name="username"
+                    required
                     autoComplete="username"
                     placeholder="Enter your user ID"
                     className="h-14 w-full rounded-[22px] border-[rgba(0,71,171,0.10)] bg-white/88 px-5 text-lg font-medium shadow-[0_8px_24px_rgba(17,24,39,0.04)]"
@@ -54,6 +62,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   <span className="mb-2 block text-sm font-medium text-[var(--gray-mid)]">Password</span>
                   <input
                     name="password"
+                    required
                     type="password"
                     autoComplete="current-password"
                     placeholder="Enter your password"
@@ -61,9 +70,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   />
                 </label>
               </div>
-              {params.error ? (
-                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  Invalid user ID or password.
+              {params.error && errorMessages[params.error] ? (
+                <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {errorMessages[params.error]}
                 </p>
               ) : null}
               <LoginSubmitButton />

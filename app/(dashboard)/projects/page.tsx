@@ -7,12 +7,13 @@ import Link from "next/link";
 import { BriefcaseBusiness, Building2, CircleAlert, Plus } from "lucide-react";
 import { projectNeedsAttention } from "@/lib/domain/scoring";
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ attention?: string }> }) {
   const session = await requireSession();
   if (!canAccessRoute(session.role, "/projects")) {
     redirect("/dashboard");
   }
   const data = await getDashboardData(session);
+  const attentionOnly = (await searchParams).attention === "1";
   const activeProjects = data.projects.filter((project) => project.status === "active").length;
   const needsAttention = data.projects.filter(projectNeedsAttention).length;
   const partnerCount = new Set(data.projects.flatMap((project) => project.vendorIds)).size;
@@ -33,7 +34,7 @@ export default async function ProjectsPage() {
         <div className="rounded-2xl border border-[var(--border)] bg-white p-3 shadow-sm sm:p-4"><div className="flex items-center gap-3"><span className="hidden h-10 w-10 shrink-0 sm:flex items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Building2 className="h-5 w-5" /></span><div><p className="text-xs font-medium text-[var(--gray-mid)]">CSR Associates</p><p className="mt-0.5 font-display text-[28px] font-semibold">{partnerCount}</p></div></div></div>
         <div className="rounded-2xl border border-[var(--border)] bg-white p-3 shadow-sm sm:p-4"><div className="flex items-center gap-3"><span className={`hidden h-10 w-10 shrink-0 sm:flex items-center justify-center rounded-xl ${needsAttention ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}><CircleAlert className="h-5 w-5" /></span><div><p className="text-xs font-medium text-[var(--gray-mid)]">Needs attention</p><p className="mt-0.5 font-display text-[28px] font-semibold">{needsAttention}</p></div></div></div>
       </section>
-      <ProjectList projects={data.projects} projectsWithUpdates={[...new Set(data.updates.map((update) => update.projectId))]} />
+      <ProjectList projects={data.projects} projectsWithUpdates={[...new Set(data.updates.map((update) => update.projectId))]} attentionOnly={attentionOnly} />
     </div>
   );
 }

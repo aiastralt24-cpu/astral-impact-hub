@@ -15,7 +15,7 @@ const protectedRoutes = [
 
 export function middleware(request: NextRequest) {
   if (protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) {
-    const hasSession = request.cookies.has("astral-session-user");
+    const hasSession = request.cookies.has("astral-session-token");
     if (!hasSession) {
       const loginUrl = new URL("/login", request.url);
       return NextResponse.redirect(loginUrl);

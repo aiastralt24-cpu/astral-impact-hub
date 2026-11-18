@@ -9,13 +9,17 @@ export async function loginAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
 
   if (!username || !password) {
-    return;
+    redirect("/login?error=missing_fields");
   }
 
-  const session = await signInWithCredentials(username, password);
-  if (!session) {
-    redirect("/login?error=invalid_credentials");
+  let result: Awaited<ReturnType<typeof signInWithCredentials>>;
+  try {
+    result = await signInWithCredentials(username, password);
+  } catch (error) {
+    console.error("Login failed", error);
+    redirect("/login?error=system_error");
   }
+  if (!result.ok) redirect(`/login?error=${result.reason}`);
 
   redirect("/dashboard");
 }

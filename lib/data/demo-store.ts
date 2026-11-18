@@ -34,10 +34,39 @@ type DemoDatabase = {
 
 declare global {
   var __astralDemoDb: DemoDatabase | undefined;
+  var __astralActiveSessions: Map<string, { token: string; expiresAt: number }> | undefined;
 }
 
 const DEMO_DB_PATH = join(process.cwd(), ".data", "demo-db.json");
 const CAN_PERSIST_DEMO_DB = !process.env.VERCEL && process.env.NODE_ENV !== "production";
+
+function activeSessions() {
+  globalThis.__astralActiveSessions ??= new Map();
+  return globalThis.__astralActiveSessions;
+}
+
+export async function claimUserSession(userId: string, token: string, expiresAt: Date) {
+  if (hasSupabaseBackend) return liveStore.claimUserSession(userId, token, expiresAt);
+  const sessions = activeSessions();
+  const current = sessions.get(userId);
+  if (current && current.expiresAt > Date.now()) return false;
+  sessions.set(userId, { token, expiresAt: expiresAt.getTime() });
+  return true;
+}
+
+export async function getUserBySessionToken(token: string, expiresAt: Date) {
+  if (hasSupabaseBackend) return liveStore.getUserBySessionToken(token, expiresAt);
+  const session = [...activeSessions().entries()].find(([, value]) => value.token === token);
+  if (!session || session[1].expiresAt <= Date.now()) return null;
+  session[1].expiresAt = expiresAt.getTime();
+  return getUserById(session[0]);
+}
+
+export async function releaseUserSession(token: string) {
+  if (hasSupabaseBackend) return liveStore.releaseUserSession(token);
+  const sessions = activeSessions();
+  for (const [userId, session] of sessions) if (session.token === token) sessions.delete(userId);
+}
 
 type DashboardData = {
   users: AppUser[];

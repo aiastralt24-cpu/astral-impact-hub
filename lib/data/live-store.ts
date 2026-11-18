@@ -505,6 +505,31 @@ export async function getUserById(id: string) {
   return (await fetchDatabase()).users.find((user) => user.id === id) ?? null;
 }
 
+export async function claimUserSession(userId: string, token: string, expiresAt: Date) {
+  const { data, error } = await createServiceRoleClient().rpc("claim_user_session", {
+    p_user_id: userId,
+    p_token: token,
+    p_expires_at: expiresAt.toISOString()
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function getUserBySessionToken(token: string, expiresAt: Date) {
+  const client = createServiceRoleClient();
+  const { data, error } = await client.from("users").select("id,active_session_expires_at").eq("active_session_token", token).maybeSingle();
+  if (error) throw error;
+  if (!data || !data.active_session_expires_at || new Date(data.active_session_expires_at) <= new Date()) return null;
+  const { error: refreshError } = await client.from("users").update({ active_session_expires_at: expiresAt.toISOString() }).eq("id", data.id).eq("active_session_token", token);
+  if (refreshError) throw refreshError;
+  return getUserById(data.id);
+}
+
+export async function releaseUserSession(token: string) {
+  const { error } = await createServiceRoleClient().rpc("release_user_session", { p_token: token });
+  if (error) throw error;
+}
+
 export async function getUserByCredentials(username: string, password: string) {
   const { hashPassword, isPasswordHash, verifyPassword } = await import("@/lib/auth/password");
   const user = (await fetchDatabase()).users.find((entry) => entry.username.toLowerCase() === username.trim().toLowerCase());
