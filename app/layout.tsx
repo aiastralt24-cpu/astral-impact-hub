@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
-      <body>
+    <html lang="en" data-scroll-behavior="smooth" style={{ colorScheme: "light", backgroundColor: "#f6f7f9" }}>
+      <body style={{ backgroundColor: "#f6f7f9" }}>
         <NavigationFeedback />
         {children}
         <Analytics />
