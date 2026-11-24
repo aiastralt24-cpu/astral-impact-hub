@@ -70,6 +70,7 @@ export async function updateWorkspaceUserAction(formData: FormData) {
 
   await updateWorkspaceUser({
     userId,
+    notificationActorUserId: session.id,
     fullName: String(formData.get("fullName") ?? ""),
     email: String(formData.get("email") ?? ""),
     username: String(formData.get("username") ?? ""),

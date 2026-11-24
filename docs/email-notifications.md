@@ -39,7 +39,7 @@ The existing Supabase URL and service-role key must remain configured. Keep noti
 
 Before enabling:
 
-1. Apply `supabase/migrations/0007_email_notifications.sql` with your normal Supabase migration process (requires the existing schema through migration 0003). This adds the queue, restricted functions, and transactional triggers. It does not change historical records.
+1. Apply `supabase/migrations/0007_email_notifications.sql` and `supabase/migrations/0008_personalized_project_emails.sql` with your normal Supabase migration process (requires the existing schema through migration 0003). These add the queue, restricted functions, transactional triggers, and the names used in personalized emails. Existing queued events remain readable; historical project records are not backfilled.
 2. Deploy the notification code and configure the authenticated cron at `/api/cron/email-notifications`. `vercel.json` runs recovery every minute. Minute-level cron requires Vercel Pro or Enterprise; Hobby supports daily cron only: [cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing). Immediate attempts run after the app saves; cron recovers interruptions and drains larger queues.
 3. Set the production variables and redeploy. [Vercel environment settings](https://vercel.com/docs/environment-variables/managing-environment-variables).
 4. Make a controlled change to a project whose assigned recipients are known. Verify each intended recipient's inbox and the matching Resend log. Check that unrelated staff and CSR users received nothing.
@@ -55,6 +55,8 @@ The existing app performs some multi-table operations in separate transactions. 
 Workers claim rows using leases and lock skipping. They freeze the sender and body before calling Resend, and reuse a stable idempotency key on retries. Temporary failures retry with backoff, up to eight attempts and within 23 hours of the first attempt. This is inside [Resend's 24-hour idempotency window](https://resend.com/docs/dashboard/emails/idempotency-keys). An interrupted worker's five-minute lease can be recovered. Permanent rejections and expired retry windows require administrator review.
 
 The worker records **accepted**, not **delivered**: provider acceptance is not proof of inbox delivery. Inspect Resend for bounce/delivery details. Inbox delivery webhooks and an in-app delivery dashboard are not included.
+
+Notification emails greet recipients by first name when available and use plain-language subjects and messages. They include the actor when the app records one, and identify the affected person or partner for assignment changes. Emails link to the project so recipients can sign in and review the details they are allowed to see.
 
 Inspect via the Supabase SQL editor (administrator/service-role only):
 

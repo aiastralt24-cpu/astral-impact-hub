@@ -378,14 +378,15 @@ export async function getUserByCredentials(username: string, password: string) {
   return user;
 }
 
-export async function createProject(input: Omit<ProjectRecord, "id" | "healthScore" | "readinessScore" | "vendorName" | "location">) {
+export async function createProject(input: Omit<ProjectRecord, "id" | "healthScore" | "readinessScore" | "vendorName" | "location"> & { actorUserId?: string }) {
   if (hasSupabaseBackend) {
     return liveStore.createProject(input);
   }
+  const { actorUserId: _actorUserId, ...projectInput } = input;
   const db = getDb();
   const vendors = db.vendors.filter((vendor) => input.vendorIds.includes(vendor.id));
   const project: ProjectRecord = {
-    ...input,
+    ...projectInput,
     id: crypto.randomUUID(),
     location: `${input.district}, ${input.state}`,
     vendorName: vendors.map((vendor) => vendor.name).join(", ") || "Managed internally",
@@ -416,6 +417,7 @@ export async function createProject(input: Omit<ProjectRecord, "id" | "healthSco
 
 export async function updateProject(input: {
   projectId: string;
+  actorUserId?: string;
   name: string;
   category: string;
   subCategory: string;
@@ -437,6 +439,7 @@ export async function updateProject(input: {
   if (hasSupabaseBackend) {
     return liveStore.updateProject(input);
   }
+  const { actorUserId: _actorUserId, ...projectInput } = input;
   const db = getDb();
   const index = db.projects.findIndex((project) => project.id === input.projectId);
   if (index === -1) {
@@ -450,7 +453,7 @@ export async function updateProject(input: {
 
   db.projects[index] = {
     ...existing,
-    ...input,
+    ...projectInput,
     vendorName,
     location
   };
@@ -582,9 +585,9 @@ export async function createWorkspaceUser(input: {
   return user;
 }
 
-export async function assignPartnerToUser(userId: string, partnerId: string) {
+export async function assignPartnerToUser(userId: string, partnerId: string, actorUserId?: string) {
   if (hasSupabaseBackend) {
-    return liveStore.assignPartnerToUser(userId, partnerId);
+    return liveStore.assignPartnerToUser(userId, partnerId, actorUserId);
   }
 
   const db = getDb();
@@ -607,6 +610,7 @@ export async function updateWorkspaceUser(input: {
   role: AppUser["role"];
   assignedProjectIds: string[];
   assignedVendorIds: string[];
+  notificationActorUserId?: string;
 }) {
   if (hasSupabaseBackend) {
     return liveStore.updateWorkspaceUser(input);

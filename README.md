@@ -69,4 +69,4 @@ To run a production preview alongside an existing development server, use `NEXT_
 
 ## Project email notifications
 
-See [email notification setup](docs/email-notifications.md) for Resend domain verification, migration `0007_email_notifications.sql`, production configuration, recipient rules, and recovery. Sending is disabled until `EMAIL_NOTIFICATIONS_ENABLED=true`; preview deployments cannot send these notifications.
+See [email notification setup](docs/email-notifications.md) for Resend domain verification, migrations `0007_email_notifications.sql` and `0008_personalized_project_emails.sql`, production configuration, recipient rules, and recovery. Sending is disabled until `EMAIL_NOTIFICATIONS_ENABLED=true`; preview deployments cannot send these notifications.

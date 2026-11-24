@@ -52,7 +52,7 @@ export async function createVendorAction(formData: FormData) {
   });
 
   if (vendor && !session.isSuperAdmin && session.role !== "admin") {
-    await assignPartnerToUser(session.id, vendor.id);
+    await assignPartnerToUser(session.id, vendor.id, session.id);
   }
 
   let welcomeStatus = "not-requested";
@@ -160,6 +160,7 @@ export async function updateVendorCredentialsAction(formData: FormData) {
 
   await updateWorkspaceUser({
     userId,
+    notificationActorUserId: session.id,
     fullName: target.fullName,
     email: target.email,
     username,

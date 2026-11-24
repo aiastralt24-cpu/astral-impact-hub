@@ -25,6 +25,7 @@ export async function createProjectAction(formData: FormData) {
   const vendorIds = managementType === "internal" ? [] : requestedVendorIds;
 
   const project = await createProject({
+    actorUserId: session.id,
     name: String(formData.get("name") ?? ""),
     category: String(formData.get("category") ?? ""),
     subCategory: String(formData.get("subCategory") ?? ""),
@@ -78,6 +79,7 @@ export async function updateProjectAction(formData: FormData) {
 
   await updateProject({
     projectId,
+    actorUserId: session.id,
     name: String(formData.get("name") ?? ""),
     category: String(formData.get("category") ?? ""),
     subCategory: String(formData.get("subCategory") ?? ""),
@@ -138,6 +140,7 @@ export async function assignProjectToVendorAction(formData: FormData) {
 
   await updateProject({
     projectId: project.id,
+    actorUserId: session.id,
     name: project.name,
     category: project.category,
     subCategory: project.subCategory,

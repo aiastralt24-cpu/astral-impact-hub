@@ -543,7 +543,7 @@ export async function getUserByCredentials(username: string, password: string) {
   return user;
 }
 
-export async function createProject(input: Omit<ProjectRecord, "id" | "healthScore" | "readinessScore" | "vendorName" | "location">) {
+export async function createProject(input: Omit<ProjectRecord, "id" | "healthScore" | "readinessScore" | "vendorName" | "location"> & { actorUserId?: string }) {
   const supabase = createServiceRoleClient();
   const { data: projectRow, error } = await supabase
     .from("projects")
@@ -563,7 +563,8 @@ export async function createProject(input: Omit<ProjectRecord, "id" | "healthSco
       strategic_tags: input.strategicTags,
       emotional_tags: input.emotionalTags,
       status: input.status,
-      require_admin_approval: input.requireAdminApproval
+      require_admin_approval: input.requireAdminApproval,
+      created_by_user_id: input.actorUserId || null
     })
     .select("*")
     .single();
@@ -585,7 +586,7 @@ export async function createProject(input: Omit<ProjectRecord, "id" | "healthSco
     const nextProjects = user.assignedProjectIds.includes(projectRow.id)
       ? user.assignedProjectIds
       : [...user.assignedProjectIds, projectRow.id];
-    await supabase.from("users").update({ assigned_project_ids: nextProjects }).eq("id", user.id);
+    await supabase.from("users").update({ assigned_project_ids: nextProjects, notification_actor_user_id: input.actorUserId || null }).eq("id", user.id);
   }
 
   const refreshed = await fetchDatabase();
@@ -594,6 +595,7 @@ export async function createProject(input: Omit<ProjectRecord, "id" | "healthSco
 
 export async function updateProject(input: {
   projectId: string;
+  actorUserId?: string;
   name: string;
   category: string;
   subCategory: string;
@@ -631,7 +633,8 @@ export async function updateProject(input: {
       emotional_tags: input.emotionalTags,
       start_date: input.startDate,
       end_date: input.endDate,
-      require_admin_approval: input.requireAdminApproval
+      require_admin_approval: input.requireAdminApproval,
+      updated_by_user_id: input.actorUserId || null
     })
     .eq("id", input.projectId);
   if (error) throw error;
@@ -663,7 +666,7 @@ export async function updateProject(input: {
         ? user.assignedProjectIds
         : [...user.assignedProjectIds, input.projectId]
       : user.role !== "vendor" ? user.assignedProjectIds : user.assignedProjectIds.filter((id) => id !== input.projectId || Boolean(user.isSuperAdmin));
-    await supabase.from("users").update({ assigned_project_ids: assignedProjectIds }).eq("id", user.id);
+    await supabase.from("users").update({ assigned_project_ids: assignedProjectIds, notification_actor_user_id: input.actorUserId || null }).eq("id", user.id);
   }
 
   const refreshed = await fetchDatabase();
@@ -739,6 +742,7 @@ export async function createWorkspaceUser(input: {
       assigned_project_ids: input.assignedProjectIds,
       assigned_vendor_ids: input.assignedVendorIds,
       managed_by_user_id: input.managedByUserId,
+      notification_actor_user_id: input.managedByUserId,
       is_super_admin: false
     })
     .select("*")
@@ -749,7 +753,7 @@ export async function createWorkspaceUser(input: {
   return refreshed.users.find((user) => user.id === data.id) ?? null;
 }
 
-export async function assignPartnerToUser(userId: string, partnerId: string) {
+export async function assignPartnerToUser(userId: string, partnerId: string, actorUserId?: string) {
   const existing = await getUserById(userId);
   if (!existing || existing.assignedVendorIds.includes(partnerId)) {
     return Boolean(existing);
@@ -758,7 +762,7 @@ export async function assignPartnerToUser(userId: string, partnerId: string) {
   const supabase = createServiceRoleClient();
   const { error } = await supabase
     .from("users")
-    .update({ assigned_vendor_ids: [...existing.assignedVendorIds, partnerId] })
+    .update({ assigned_vendor_ids: [...existing.assignedVendorIds, partnerId], notification_actor_user_id: actorUserId || null })
     .eq("id", userId);
   if (error) throw error;
   return true;
@@ -773,6 +777,7 @@ export async function updateWorkspaceUser(input: {
   role: AppUser["role"];
   assignedProjectIds: string[];
   assignedVendorIds: string[];
+  notificationActorUserId?: string;
 }) {
   const { hashPassword } = await import("@/lib/auth/password");
   const supabase = createServiceRoleClient();
@@ -787,7 +792,8 @@ export async function updateWorkspaceUser(input: {
       password: input.password?.trim() ? await hashPassword(input.password) : existing.password,
       role: input.role,
       assigned_project_ids: input.assignedProjectIds,
-      assigned_vendor_ids: input.assignedVendorIds
+      assigned_vendor_ids: input.assignedVendorIds,
+      notification_actor_user_id: input.notificationActorUserId || null
     })
     .eq("id", input.userId);
   if (error) throw error;
